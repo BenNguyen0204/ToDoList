@@ -4,46 +4,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles/variables.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/sidebar.css" />
+    <link rel="stylesheet" href="styles/app.css" />
+    <link rel="stylesheet" href="styles/tasks.css" />
+    <link rel="stylesheet" href="styles/toast.css" />
+    <link rel="stylesheet" href="styles/welcome.css" />
     <title>Document</title>
 </head>
 
 <body>
-    <div class="app">
-        <div class="topBar">
-            <h1>To-Do List</h1>
-            <div class="buttons">
-                <div class="filterDropdown" id="filterDropdown">
-                    <button id="filterToggle">
-                        <img src="images/filter.png" alt="Filter" />
-                    </button>
-                    <div class="filterMenu" id="filterMenu">
-                        <label><input type="radio" name="filter" value="all" checked /> All</label>
-                        <label><input type="radio" name="filter" value="active" /> Active</label>
-                        <label><input type="radio" name="filter" value="completed" /> Completed</label>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebarHeader">
+            <h2>My Lists</h2>
+            <button id="newListButton">+</button>
+        </div>
+        <ul id="listTabs"></ul>
+    </div>
+
+    <div class="main">
+        <div class="app">
+            <div class="topBar">
+                <h1 id="listTitle">To-Do List</h1>
+                <div class="buttons">
+                    <div class="filterDropdown" id="filterDropdown">
+                        <button id="filterToggle">
+                            <img src="images/filter.png" alt="Filter" />
+                        </button>
+                        <div class="filterMenu" id="filterMenu">
+                            <label><input type="radio" name="filter" value="all" checked /> All</label>
+                            <label><input type="radio" name="filter" value="active" /> Active</label>
+                            <label><input type="radio" name="filter" value="completed" /> Completed</label>
+                        </div>
                     </div>
+                    <button id="themeButton">
+                        <img src="images/darkMode.png" alt="Theme Button" />
+                    </button>
                 </div>
-                <button id="themeButton">
-                    <img src="images/darkMode.png" alt="Theme Button" />
-                </button>
+            </div>
+
+            <div class="inputRow">
+                <input type="text" id="taskInput" placeholder="Enter a task for today" />
+                <button id="addButton">Add</button>
+            </div>
+
+            <div class="taskCounter">
+                <span id="totalCount">Total: 0</span>
+                <span id="activeCount">Active: 0</span>
+                <span id="completedCount">Completed: 0</span>
             </div>
         </div>
 
-        <div class="inputRow">
-            <input type="text" id="taskInput" placeholder="Enter a task for today" />
-            <button id="addButton">Add</button>
+        <div class="welcomeState" id="welcomeState">
+            <h2>Welcome to your To-Do List</h2>
+            <p>Create a new list to get started</p>
         </div>
 
-        <div class="taskCounter">
-            <span id="totalCount">Total: 0</span>
-            <span id="activeCount">Active: 0</span>
-            <span id="completedCount">Completed: 0</span>
+        <div class="tasksDiv">
+            <ul id="tasksList"></ul>
+            <div class="emptyState" id="emptyState">No tasks yet</div>
         </div>
-    </div>
-
-    <div class="tasksDiv">
-        <ul id="tasksList"></ul>
-        <div class="emptyState" id="emptyState">No tasks yet</div>
     </div>
 
     <div class="toast" id="toast">
@@ -53,10 +74,14 @@
             <button class="toastNo" id="toastNo">No</button>
         </div>
     </div>
-
     <div id="overlay" class="overlay"></div>
 
-    <script src="script.js"></script>
+    <script src="scripts/storage.js"></script>
+    <script src="scripts/toast.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/tasks.js"></script>
+    <script src="scripts/theme.js"></script>
+    <script src="scripts/main.js"></script>
 </body>
 
 </html>

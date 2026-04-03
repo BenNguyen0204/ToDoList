@@ -1,0 +1,100 @@
+.sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--card);
+    border-right: 2px solid var(--border);
+    padding: 20px 12px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+
+    .sidebarHeader {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+
+        h2 {
+            font-size: 16px;
+            margin: 0;
+            flex: 1;
+        }
+
+        #newListButton {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &:hover {
+                background: var(--primary-hover);
+            }
+        }
+    }
+
+    #listTabs {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            border: 2px solid transparent;
+            color: var(--text);
+            margin-bottom: 0;
+            background: transparent;
+
+            span {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                margin: 0;
+            }
+
+            &:hover { background: var(--border); }
+
+            &.active {
+                border-color: var(--primary);
+                background: var(--bg);
+            }
+
+            .deleteListBtn {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 2px;
+                opacity: 0.5;
+                font-size: 14px;
+                color: var(--text);
+
+                &:hover {
+                    opacity: 1;
+                    color: var(--danger);
+                }
+            }
+        }
+    }
+}
+
+.emptyListHint {
+    font-size: 12px;
+    opacity: 0.4;
+    margin-top: 8px;
+    text-align: center;
+    padding: 0 8px;
+}

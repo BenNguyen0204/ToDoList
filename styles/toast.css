@@ -1,0 +1,73 @@
+.toast {
+    position: fixed;
+    text-align: center;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card);
+    color: var(--text);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    z-index: 1000;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+
+    &.show {
+        visibility: visible;
+        pointer-events: all;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .toastButtons {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+
+        button {
+            padding: 6px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .toastYes {
+            background: var(--primary);
+            color: white;
+
+            &:hover { background: var(--primary-hover); }
+        }
+
+        .toastNo {
+            background: var(--danger);
+            color: white;
+
+            &:hover { background: var(--danger-hover); }
+        }
+    }
+}
+
+.toastInput {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 100px;
+    padding: 8px 16px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+
+    &:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+}
