@@ -49,9 +49,7 @@ function renderSidebar() {
         const li = document.createElement("li");
         if (list.id === currentListId) li.classList.add("active");
 
-        const span = document.createElement("span");
-        span.textContent = list.name;
-        span.addEventListener("click", () => {
+        li.addEventListener("click", () => {
             currentListId = list.id;
             localStorage.setItem("currentListId", currentListId);
             listTitle.textContent = list.name;
@@ -59,16 +57,66 @@ function renderSidebar() {
             renderTask();
         });
 
+        const span = document.createElement("span");
+        span.textContent = list.name;
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "editListBtn";
+
+        const editImg = document.createElement("img");
+        editImg.src = "images/edit.png";
+        editImg.alt = "Edit";
+        editBtn.appendChild(editImg);
+
+        editBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = list.name;
+            input.className = "editListInput";
+
+            span.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const save = () => {
+                const newName = input.value.trim();
+
+                if (newName) {
+                    list.name = newName;
+                    saveLists(lists);
+                }
+
+                renderSidebar();
+                renderTask();
+            };
+
+            input.addEventListener("blur", save);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") renderSidebar();
+            });
+        });
+
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "deleteListBtn";
-        deleteBtn.textContent = "✕";
+
+        const deleteImg = document.createElement("img");
+        deleteImg.src = "images/delete.png";
+        deleteImg.alt = "Delete";
+        deleteBtn.appendChild(deleteImg);
+
         deleteBtn.addEventListener("click", (e) => {
             e.stopPropagation();
+
             lists = lists.filter(l => l.id !== list.id);
+
             if (currentListId === list.id) {
                 currentListId = lists.length > 0 ? lists[0].id : null;
                 localStorage.setItem("currentListId", currentListId);
             }
+
             saveLists(lists);
             listTitle.textContent = getCurrentList()?.name || "";
             renderSidebar();
@@ -76,11 +124,12 @@ function renderSidebar() {
         });
 
         li.appendChild(span);
+        li.appendChild(editBtn);
         li.appendChild(deleteBtn);
         listTabs.appendChild(li);
     });
 
-    listTitle.textContent = getCurrentList().name;
+    listTitle.textContent = getCurrentList()?.name || "";
 }
 
 newListButton.addEventListener("click", () => {
@@ -88,8 +137,10 @@ newListButton.addEventListener("click", () => {
         const newList = { id: Date.now(), name, tasks: [] };
         lists.push(newList);
         currentListId = newList.id;
+
         localStorage.setItem("currentListId", currentListId);
         saveLists(lists);
+
         renderSidebar();
         renderTask();
     });

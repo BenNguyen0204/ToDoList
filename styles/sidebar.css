@@ -55,7 +55,6 @@
             font-size: 13px;
             border: 2px solid transparent;
             color: var(--text);
-            margin-bottom: 0;
             background: transparent;
 
             span {
@@ -66,26 +65,60 @@
                 margin: 0;
             }
 
-            &:hover { background: var(--border); }
+            &:hover {
+                background: var(--border);
+            }
 
             &.active {
                 border-color: var(--primary);
                 background: var(--bg);
             }
 
+            .editListBtn,
             .deleteListBtn {
-                background: none;
-                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
+                padding: 0;
+                border: 0;
+                border-radius: 6px;
                 cursor: pointer;
-                padding: 2px;
-                opacity: 0.5;
-                font-size: 14px;
-                color: var(--text);
+                flex-shrink: 0;
+
+                img {
+                    width: 17px;
+                    filter: invert(1);
+                }
+            }
+
+            .editListBtn {
+                background: var(--primary);
 
                 &:hover {
-                    opacity: 1;
-                    color: var(--danger);
+                    background: var(--primary-hover);
                 }
+            }
+
+            .deleteListBtn {
+                background: var(--danger);
+
+                &:hover {
+                    background: var(--danger-hover);
+                }
+            }
+
+            .editListInput {
+                flex: 1;
+                min-width: 0;
+                padding: 4px 6px;
+                border: 1px solid var(--primary);
+                border-radius: 6px;
+                outline: none;
+                font: inherit;
+                color: var(--text);
+                background: var(--card);
             }
         }
     }
