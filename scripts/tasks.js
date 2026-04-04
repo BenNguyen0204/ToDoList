@@ -112,7 +112,7 @@ function renderTask() {
         const editButton = document.createElement("button");
         editButton.className = "editButton";
         const editImg = document.createElement("img");
-        editImg.src = "images/edit.png";
+        editImg.src = "../images/edit.png";
         editImg.alt = "Edit";
         editButton.appendChild(editImg);
         editButton.addEventListener("click", () => {
@@ -122,7 +122,7 @@ function renderTask() {
         });
 
         const delImg = document.createElement("img");
-        delImg.src = "images/delete.png";
+        delImg.src = "../images/delete.png";
         delImg.alt = "Delete";
         const deleteButton = document.createElement("button");
         deleteButton.className = "deleteButton";
