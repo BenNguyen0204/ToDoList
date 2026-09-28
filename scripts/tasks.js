@@ -61,10 +61,10 @@ tasksList.addEventListener("dragover", (e) => {
 const TASK_COLORS = [
     { name: "Red", value: "#e74c3c" },
     { name: "Orange", value: "#f39c12" },
-    { name: "Yellow", value: "#f1c40f" },
+    { name: "Pink", value: "#f10fe6" },
     { name: "Green", value: "#2ecc71" },
     { name: "Blue", value: "#3498db" },
-    { name: "Purple", value: "#9b59b6" }
+    { name: "Teal", value: "#59b5b6" }
 ];
 
 let colorPicker = null;
