@@ -58,6 +58,83 @@ tasksList.addEventListener("dragover", (e) => {
     getCurrentList().tasks = newOrder;
 });
 
+const TASK_COLORS = [
+    { name: "Red", value: "#e74c3c" },
+    { name: "Orange", value: "#f39c12" },
+    { name: "Yellow", value: "#f1c40f" },
+    { name: "Green", value: "#2ecc71" },
+    { name: "Blue", value: "#3498db" },
+    { name: "Purple", value: "#9b59b6" }
+];
+
+let colorPicker = null;
+let colorPickerTaskId = null;
+
+function closeColorPicker() {
+    if (colorPicker) colorPicker.classList.remove("open");
+    colorPickerTaskId = null;
+}
+
+function setTaskColor(taskId, color) {
+    const t = getTasks().find(t => t.id === taskId);
+    if (!t) return;
+    if (color) t.color = color;
+    else delete t.color;
+    saveTasks();
+    renderTask();
+}
+
+function buildColorPicker() {
+    colorPicker = document.createElement("div");
+    colorPicker.className = "colorPicker";
+    colorPicker.addEventListener("click", (e) => e.stopPropagation());
+
+    for (const c of TASK_COLORS) {
+        const opt = document.createElement("button");
+        opt.className = "colorOption";
+        opt.style.background = c.value;
+        opt.title = c.name;
+        opt.setAttribute("aria-label", c.name);
+        opt.addEventListener("click", () => {
+            const id = colorPickerTaskId;
+            closeColorPicker();
+            setTaskColor(id, c.value);
+        });
+        colorPicker.appendChild(opt);
+    }
+
+    const clear = document.createElement("button");
+    clear.className = "colorOption colorClear";
+    clear.textContent = "\u00d7";
+    clear.title = "No color";
+    clear.setAttribute("aria-label", "No color");
+    clear.addEventListener("click", () => {
+        const id = colorPickerTaskId;
+        closeColorPicker();
+        setTaskColor(id, null);
+    });
+    colorPicker.appendChild(clear);
+
+    document.body.appendChild(colorPicker);
+}
+
+function openColorPicker(anchor, taskId) {
+    if (!colorPicker) buildColorPicker();
+    if (colorPicker.classList.contains("open") && colorPickerTaskId === taskId) {
+        closeColorPicker();
+        return;
+    }
+    colorPickerTaskId = taskId;
+    const rect = anchor.getBoundingClientRect();
+    colorPicker.style.top = `${rect.bottom + 6}px`;
+    colorPicker.style.left = `${rect.left}px`;
+    colorPicker.classList.add("open");
+}
+
+document.addEventListener("click", closeColorPicker);
+window.addEventListener("scroll", closeColorPicker, true);
+window.addEventListener("resize", closeColorPicker);
+
 function renderTask() {
     updateMainVisibility();
     tasksList.innerHTML = "";
@@ -90,6 +167,10 @@ function renderTask() {
         const li = document.createElement("li");
         li.dataset.id = String(task.id);
         li.draggable = true;
+        if (task.color) {
+            li.dataset.color = "true";
+            li.style.setProperty("--task-color", task.color);
+        }
 
         li.addEventListener("dragstart", () => li.classList.add("dragging"));
         li.addEventListener("dragend", () => { li.classList.remove("dragging"); saveTasks(); });
@@ -103,6 +184,17 @@ function renderTask() {
             t.completed = !t.completed;
             saveTasks();
             renderTask();
+        });
+
+        const colorButton = document.createElement("button");
+        colorButton.className = "colorButton";
+        colorButton.title = "Set color";
+        colorButton.setAttribute("aria-label", "Set task color");
+        if (task.color) colorButton.style.background = task.color;
+        else colorButton.classList.add("empty");
+        colorButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openColorPicker(colorButton, task.id);
         });
 
         const text = document.createElement("span");
@@ -141,6 +233,7 @@ function renderTask() {
         buttonGroup.appendChild(deleteButton);
 
         li.appendChild(checkBox);
+        li.appendChild(colorButton);
         li.appendChild(text);
         li.appendChild(buttonGroup);
         tasksList.appendChild(li);

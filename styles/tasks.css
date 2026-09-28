@@ -21,6 +21,11 @@
             color: var(--text);
             cursor: grab;
 
+            &[data-color] {
+                border-left: 6px solid var(--task-color);
+                background: color-mix(in srgb, var(--task-color) 14%, var(--card));
+            }
+
             &.dragging {
                 opacity: 0.4;
                 cursor: grabbing;
@@ -28,6 +33,24 @@
             }
 
             span { margin: 10px; }
+
+            .colorButton {
+                flex-shrink: 0;
+                width: 22px;
+                height: 22px;
+                padding: 0;
+                border-radius: 50%;
+                border: 2px solid var(--button-border);
+                cursor: pointer;
+
+                &.empty {
+                    background: transparent;
+                    border-style: dashed;
+                    opacity: 0.6;
+                }
+
+                &:hover { transform: scale(1.15); opacity: 1; }
+            }
         }
 
         .buttonGroup {
@@ -87,5 +110,41 @@
         display: none;
         text-align: center;
         margin-top: 100px;
+    }
+}
+
+.colorPicker {
+    display: none;
+    position: fixed;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    z-index: 200;
+
+    &.open { display: flex; }
+
+    .colorOption {
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+
+        &:hover { border-color: var(--button-border); }
+    }
+
+    .colorClear {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--text);
+        border: 2px dashed var(--button-border);
+        font-size: 14px;
+        line-height: 1;
     }
 }

@@ -6,6 +6,7 @@
 - **Complete tasks** — check the checkbox to mark as done
 - **Edit tasks** — click the edit button to rename a task
 - **Delete tasks** — remove tasks individually
+- **Color labels** — click the dot on a task to tag it with a color (or clear it)
 - **Drag and drop** — reorder tasks by dragging
 - **Filter tasks** — view All, Active, or Completed tasks
 - **Task counter** — live count of total, active, and completed tasks
