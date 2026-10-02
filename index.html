@@ -57,7 +57,12 @@
 
             <div class="inputRow">
                 <input type="text" id="taskInput" placeholder="Enter a task for today" />
-                <button id="addButton">Add</button>
+                <div class="newTaskOptions">
+                    <button id="newTaskColorButton" class="colorButton empty" title="Set color"
+                        aria-label="Set task color"></button>
+                    <button id="newTaskDateButton" class="dateButton empty">Set due date</button>
+                    <button id="addButton">Add</button>
+                </div>
             </div>
 
             <div class="taskCounter">

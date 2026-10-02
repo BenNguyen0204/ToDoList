@@ -1,46 +1,54 @@
-// Which tasks are currently shown: "all", "active" (not completed), or "completed".
-// This only affects display — it never deletes or changes task data.
+// ---- Small helpers for looking up a task by id ----
+// Used anywhere a click handler needs the live task object/index instead of
+// the stale snapshot captured when the row was rendered.
+function findTask(id) {
+    return getTasks().find(t => t.id === id);
+}
+function findTaskIndex(id) {
+    return getTasks().findIndex(t => t.id === id);
+}
+
+// ---- Filter + Sort dropdowns ----
+// Both dropdowns behave the same way: a toggle button opens/closes a menu
+// of radio options, clicking outside closes it, and picking an option fires
+// a callback and re-renders. This one helper drives both.
+function setupDropdown(toggleId, menuId, onChange) {
+    const toggle = document.getElementById(toggleId);
+    const menu = document.getElementById(menuId);
+
+    toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.classList.toggle("open");
+    });
+
+    // Clicking inside the menu shouldn't close it...
+    menu.addEventListener("click", (e) => e.stopPropagation());
+    // ...but clicking anywhere else should.
+    document.addEventListener("click", () => menu.classList.remove("open"));
+
+    menu.querySelectorAll("input").forEach(radio => {
+        radio.addEventListener("change", () => {
+            onChange(radio.value);
+            menu.classList.remove("open");
+        });
+    });
+}
+
+// Which tasks are currently shown: "all", "active" (not completed), or
+// "completed". This only affects display — it never deletes or changes
+// task data.
 let currentFilter = "all";
-const filterToggle = document.getElementById("filterToggle");
-const filterMenu = document.getElementById("filterMenu");
-
-// Open/close the filter dropdown when its button is clicked.
-filterToggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    filterMenu.classList.toggle("open");
+setupDropdown("filterToggle", "filterMenu", (value) => {
+    currentFilter = value;
+    renderTask();
 });
 
-// Clicking anywhere outside the dropdown closes it...
-document.addEventListener("click", () => filterMenu.classList.remove("open"));
-// ...but clicking inside the dropdown itself shouldn't close it.
-filterMenu.addEventListener("click", (e) => e.stopPropagation());
-
-// When the user picks a different filter option, store it and re-render the list.
-document.querySelectorAll('input[name="filter"]').forEach(radio => {
-    radio.addEventListener("change", () => {
-        currentFilter = radio.value;
-        renderTask();
-    });
-});
-
+// How the task list is ordered: "manual" (drag and drop), "earliest"/
+// "latest" (by due date), or "color".
 let currentSort = "manual";
-const sortToggle = document.getElementById("sortToggle");
-const sortMenu = document.getElementById("sortMenu");
-
-sortToggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    sortMenu.classList.toggle("open");
-});
-
-document.addEventListener("click", () => sortMenu.classList.remove("open"));
-sortMenu.addEventListener("click", (e) => e.stopPropagation());
-
-document.querySelectorAll('input[name="sort"]').forEach(radio => {
-    radio.addEventListener("change", () => {
-        currentSort = radio.value;
-        sortMenu.classList.remove("open");
-        renderTask();
-    });
+setupDropdown("sortToggle", "sortMenu", (value) => {
+    currentSort = value;
+    renderTask();
 });
 
 function sortTasks(tasks) {
@@ -75,16 +83,41 @@ function formatTaskDate(dateStr) {
     return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-let dueDatePicker = null;
-let dueDatePickerTaskId = null;
+// ---- Shared "floating popup anchored to a button" behavior ----
+// The color picker and the due-date picker are both a small element that
+// appears under the button that opened it, and closes on outside click,
+// scroll, or window resize. This factory handles that common part; each
+// caller builds its own element and decides what goes inside it.
+function createAnchoredPopup(tagName, className) {
+    const el = document.createElement(tagName);
+    el.className = className;
+    el.addEventListener("click", (e) => e.stopPropagation());
+    document.body.appendChild(el);
 
-function closeDueDatePicker() {
-    if (dueDatePicker) dueDatePicker.classList.remove("open");
-    dueDatePickerTaskId = null;
+    function close() {
+        el.classList.remove("open");
+    }
+
+    function open(anchor) {
+        const rect = anchor.getBoundingClientRect();
+        el.style.top = `${rect.bottom + 6}px`;
+        el.style.left = `${rect.left}px`;
+        el.classList.add("open");
+    }
+
+    document.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+
+    return { element: el, open, close };
 }
 
+// ---- Due date picker ----
+// Rather than being hard-wired to "save onto this task id", the picker takes
+// a callback — that's what lets both an existing task's date button AND the
+// new-task date button (which has no task id yet) share the same popup.
 function setTaskDueDate(taskId, dateStr) {
-    const t = getTasks().find(t => t.id === taskId);
+    const t = findTask(taskId);
     if (!t) return;
     if (dateStr) t.dueDate = dateStr;
     else delete t.dueDate;
@@ -92,45 +125,142 @@ function setTaskDueDate(taskId, dateStr) {
     renderTask();
 }
 
-function buildDueDatePicker() {
-    dueDatePicker = document.createElement("input");
-    dueDatePicker.type = "date";
-    dueDatePicker.className = "dueDatePicker";
-    dueDatePicker.addEventListener("click", (e) => e.stopPropagation());
-    // Browsers fire "change" as soon as every segment (month/day/year) has
-    // *some* value, even mid-typing with an incomplete year (e.g. "0002").
-    // Save on every change so picking from the calendar still works, but
-    // only close once focus actually leaves the field, so typing a full
-    // 4-digit year isn't cut short.
-    dueDatePicker.addEventListener("change", () => {
-        setTaskDueDate(dueDatePickerTaskId, dueDatePicker.value);
-    });
-    dueDatePicker.addEventListener("blur", () => {
-        closeDueDatePicker();
-    });
-    document.body.appendChild(dueDatePicker);
+const dueDatePopup = createAnchoredPopup("input", "dueDatePicker");
+let dueDatePickerOnSelect = null;
+
+dueDatePopup.element.type = "date";
+// Browsers fire "change" as soon as every segment (month/day/year) has
+// *some* value, even mid-typing with an incomplete year (e.g. "0002").
+// Save on every change so picking from the calendar still works, but
+// only close once focus actually leaves the field, so typing a full
+// 4-digit year isn't cut short.
+dueDatePopup.element.addEventListener("change", () => {
+    if (dueDatePickerOnSelect) dueDatePickerOnSelect(dueDatePopup.element.value);
+});
+dueDatePopup.element.addEventListener("blur", () => {
+    dueDatePopup.close();
+});
+
+function openDueDatePicker(anchor, currentValue, onSelect) {
+    dueDatePickerOnSelect = onSelect;
+    dueDatePopup.element.value = currentValue || "";
+    dueDatePopup.open(anchor);
+    dueDatePopup.element.focus();
+    if (dueDatePopup.element.showPicker) dueDatePopup.element.showPicker();
 }
 
-function openDueDatePicker(anchor, taskId, currentValue) {
-    if (!dueDatePicker) buildDueDatePicker();
-    dueDatePickerTaskId = taskId;
-    dueDatePicker.value = currentValue || "";
-    const rect = anchor.getBoundingClientRect();
-    dueDatePicker.style.top = `${rect.bottom + 6}px`;
-    dueDatePicker.style.left = `${rect.left}px`;
-    dueDatePicker.classList.add("open");
-    dueDatePicker.focus();
-    if (dueDatePicker.showPicker) dueDatePicker.showPicker();
+// ---- Color picker ----
+const TASK_COLORS = [
+    { name: "Red", value: "#e74c3c" },
+    { name: "Orange", value: "#f39c12" },
+    { name: "Pink", value: "#f10fe6" },
+    { name: "Green", value: "#2ecc71" },
+    { name: "Blue", value: "#3498db" },
+    { name: "Teal", value: "#59b5b6" }
+];
+
+function setTaskColor(taskId, color) {
+    const t = findTask(taskId);
+    if (!t) return;
+    if (color) t.color = color;
+    else delete t.color;
+    saveTasks();
+    renderTask();
 }
 
-document.addEventListener("click", closeDueDatePicker);
-window.addEventListener("scroll", closeDueDatePicker, true);
-window.addEventListener("resize", closeDueDatePicker);
+// Same idea as the due-date picker: identity + callback instead of a fixed
+// task id, so the new-task color button can reuse this popup too.
+const colorPopup = createAnchoredPopup("div", "colorPicker");
+let colorPickerIdentity = null;
+let colorPickerOnSelect = null;
 
+for (const c of TASK_COLORS) {
+    const opt = document.createElement("button");
+    opt.className = "colorOption";
+    opt.style.background = c.value;
+    opt.title = c.name;
+    opt.setAttribute("aria-label", c.name);
+    opt.addEventListener("click", () => {
+        const onSelect = colorPickerOnSelect;
+        colorPopup.close();
+        if (onSelect) onSelect(c.value);
+    });
+    colorPopup.element.appendChild(opt);
+}
+
+const clearColorOption = document.createElement("button");
+clearColorOption.className = "colorOption colorClear";
+clearColorOption.textContent = "\u00d7";
+clearColorOption.title = "No color";
+clearColorOption.setAttribute("aria-label", "No color");
+clearColorOption.addEventListener("click", () => {
+    const onSelect = colorPickerOnSelect;
+    colorPopup.close();
+    if (onSelect) onSelect(null);
+});
+colorPopup.element.appendChild(clearColorOption);
+
+function openColorPicker(anchor, identity, onSelect) {
+    // Clicking the same button again toggles it closed.
+    if (colorPopup.element.classList.contains("open") && colorPickerIdentity === identity) {
+        colorPopup.close();
+        return;
+    }
+    colorPickerIdentity = identity;
+    colorPickerOnSelect = onSelect;
+    colorPopup.open(anchor);
+}
+
+// ---- Task list rendering ----
 const tasksList = document.getElementById("tasksList");
 const emptyState = document.getElementById("emptyState");
 const taskInput = document.getElementById("taskInput");
 const addButton = document.getElementById("addButton");
+
+// ---- Color + due date for a task that doesn't exist yet ----
+// These hold whatever the user picked in the "new task" row before hitting
+// Add. They're plain variables, not task fields, since there's no task to
+// attach them to until addTask() actually creates one.
+const newTaskColorButton = document.getElementById("newTaskColorButton");
+const newTaskDateButton = document.getElementById("newTaskDateButton");
+let pendingColor = null;
+let pendingDueDate = null;
+
+function updateNewTaskColorButton() {
+    if (pendingColor) {
+        newTaskColorButton.style.background = pendingColor;
+        newTaskColorButton.classList.remove("empty");
+    } else {
+        newTaskColorButton.style.background = "";
+        newTaskColorButton.classList.add("empty");
+    }
+}
+
+function updateNewTaskDateButton() {
+    if (pendingDueDate) {
+        newTaskDateButton.textContent = formatTaskDate(pendingDueDate);
+        newTaskDateButton.classList.remove("empty");
+    } else {
+        newTaskDateButton.textContent = "Set due date";
+        newTaskDateButton.classList.add("empty");
+    }
+}
+
+newTaskColorButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openColorPicker(newTaskColorButton, "new-task", (color) => {
+        pendingColor = color;
+        updateNewTaskColorButton();
+    });
+});
+
+newTaskDateButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDueDatePicker(newTaskDateButton, pendingDueDate, (dateStr) => {
+        pendingDueDate = dateStr || null;
+        updateNewTaskDateButton();
+    });
+});
 
 function updateCounters() {
     if (lists.length === 0) {
@@ -167,83 +297,6 @@ tasksList.addEventListener("dragover", (e) => {
     }).filter(Boolean);
     getCurrentList().tasks = newOrder;
 });
-
-const TASK_COLORS = [
-    { name: "Red", value: "#e74c3c" },
-    { name: "Orange", value: "#f39c12" },
-    { name: "Pink", value: "#f10fe6" },
-    { name: "Green", value: "#2ecc71" },
-    { name: "Blue", value: "#3498db" },
-    { name: "Teal", value: "#59b5b6" }
-];
-
-let colorPicker = null;
-let colorPickerTaskId = null;
-
-function closeColorPicker() {
-    if (colorPicker) colorPicker.classList.remove("open");
-    colorPickerTaskId = null;
-}
-
-function setTaskColor(taskId, color) {
-    const t = getTasks().find(t => t.id === taskId);
-    if (!t) return;
-    if (color) t.color = color;
-    else delete t.color;
-    saveTasks();
-    renderTask();
-}
-
-function buildColorPicker() {
-    colorPicker = document.createElement("div");
-    colorPicker.className = "colorPicker";
-    colorPicker.addEventListener("click", (e) => e.stopPropagation());
-
-    for (const c of TASK_COLORS) {
-        const opt = document.createElement("button");
-        opt.className = "colorOption";
-        opt.style.background = c.value;
-        opt.title = c.name;
-        opt.setAttribute("aria-label", c.name);
-        opt.addEventListener("click", () => {
-            const id = colorPickerTaskId;
-            closeColorPicker();
-            setTaskColor(id, c.value);
-        });
-        colorPicker.appendChild(opt);
-    }
-
-    const clear = document.createElement("button");
-    clear.className = "colorOption colorClear";
-    clear.textContent = "\u00d7";
-    clear.title = "No color";
-    clear.setAttribute("aria-label", "No color");
-    clear.addEventListener("click", () => {
-        const id = colorPickerTaskId;
-        closeColorPicker();
-        setTaskColor(id, null);
-    });
-    colorPicker.appendChild(clear);
-
-    document.body.appendChild(colorPicker);
-}
-
-function openColorPicker(anchor, taskId) {
-    if (!colorPicker) buildColorPicker();
-    if (colorPicker.classList.contains("open") && colorPickerTaskId === taskId) {
-        closeColorPicker();
-        return;
-    }
-    colorPickerTaskId = taskId;
-    const rect = anchor.getBoundingClientRect();
-    colorPicker.style.top = `${rect.bottom + 6}px`;
-    colorPicker.style.left = `${rect.left}px`;
-    colorPicker.classList.add("open");
-}
-
-document.addEventListener("click", closeColorPicker);
-window.addEventListener("scroll", closeColorPicker, true);
-window.addEventListener("resize", closeColorPicker);
 
 function renderTask() {
     updateMainVisibility();
@@ -290,7 +343,7 @@ function renderTask() {
         checkBox.type = "checkbox";
         checkBox.checked = task.completed;
         checkBox.addEventListener("click", () => {
-            const t = getTasks().find(t => t.id === task.id);
+            const t = findTask(task.id);
             if (!t) return;
             t.completed = !t.completed;
             saveTasks();
@@ -305,7 +358,7 @@ function renderTask() {
         else colorButton.classList.add("empty");
         colorButton.addEventListener("click", (e) => {
             e.stopPropagation();
-            openColorPicker(colorButton, task.id);
+            openColorPicker(colorButton, task.id, (color) => setTaskColor(task.id, color));
         });
 
         const text = document.createElement("span");
@@ -322,7 +375,7 @@ function renderTask() {
         }
         dateButton.addEventListener("click", (e) => {
             e.stopPropagation();
-            openDueDatePicker(dateButton, task.id, task.dueDate);
+            openDueDatePicker(dateButton, task.dueDate, (dateStr) => setTaskDueDate(task.id, dateStr));
         });
 
         const editButton = document.createElement("button");
@@ -332,7 +385,7 @@ function renderTask() {
         editImg.alt = "Edit";
         editButton.appendChild(editImg);
         editButton.addEventListener("click", () => {
-            const idx = getTasks().findIndex(t => t.id === task.id);
+            const idx = findTaskIndex(task.id);
             if (idx === -1) return;
             showEditToast(idx);
         });
@@ -344,7 +397,7 @@ function renderTask() {
         deleteButton.className = "deleteButton";
         deleteButton.appendChild(delImg);
         deleteButton.addEventListener("click", () => {
-            const idx = getTasks().findIndex(t => t.id === task.id);
+            const idx = findTaskIndex(task.id);
             if (idx === -1) return;
             getTasks().splice(idx, 1);
             saveTasks();
@@ -367,24 +420,36 @@ function renderTask() {
     updateCounters();
 }
 
+function resetAddTaskInputs() {
+    taskInput.value = "";
+    pendingColor = null;
+    pendingDueDate = null;
+    updateNewTaskColorButton();
+    updateNewTaskDateButton();
+}
+
 function addTask() {
     const task = taskInput.value.trim();
     if (!task) return;
+
+    const newTask = { id: Date.now(), text: task, completed: false };
+    if (pendingColor) newTask.color = pendingColor;
+    if (pendingDueDate) newTask.dueDate = pendingDueDate;
 
     const tasks = getTasks();
     const isDup = tasks.some(t => t.text.toLowerCase() === task.toLowerCase());
     if (isDup) {
         showToast(`"${task}" is already in your list! Add it anyway?`, () => {
-            getTasks().push({ id: Date.now(), text: task, completed: false });
-            taskInput.value = "";
+            getTasks().push(newTask);
+            resetAddTaskInputs();
             saveTasks();
             renderTask();
         });
         return;
     }
 
-    tasks.push({ id: Date.now(), text: task, completed: false });
-    taskInput.value = "";
+    tasks.push(newTask);
+    resetAddTaskInputs();
     saveTasks();
     renderTask();
 }

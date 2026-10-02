@@ -35,54 +35,12 @@
             span {
                 margin: 10px;
             }
-
-            .colorButton {
-                flex-shrink: 0;
-                width: 22px;
-                height: 22px;
-                padding: 0;
-                border-radius: 50%;
-                border: 2px solid var(--button-border);
-                cursor: pointer;
-
-                &.empty {
-                    background: transparent;
-                    border-style: dashed;
-                    opacity: 0.6;
-                }
-
-                &:hover {
-                    transform: scale(1.15);
-                    opacity: 1;
-                }
-            }
         }
 
         .buttonGroup {
             display: flex;
             gap: 7px;
             margin-left: auto;
-
-            .dateButton {
-                flex-shrink: 0;
-                font-size: 12px;
-                white-space: nowrap;
-                background: transparent;
-                color: var(--text);
-                border: 2px solid var(--button-border);
-                border-radius: 20px;
-                padding: 4px 10px;
-                cursor: pointer;
-
-                &.empty {
-                    opacity: 0.6;
-                    font-style: italic;
-                }
-
-                &:hover {
-                    background: var(--border);
-                }
-            }
 
             .deleteButton {
                 display: flex;
@@ -141,6 +99,57 @@
         text-align: center;
         margin-top: 100px;
     }
+}
+
+/* Shared by task rows AND the "new task" row, so a color/due-date button
+   looks and behaves the same whether it's on an existing task or on the
+   input row used to create one. */
+.colorButton {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--button-border);
+    cursor: pointer;
+
+    &.empty {
+        background: transparent;
+        border-style: dashed;
+        opacity: 0.6;
+    }
+
+    &:hover {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+}
+
+.dateButton {
+    flex-shrink: 0;
+    font-size: 12px;
+    white-space: nowrap;
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--button-border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    cursor: pointer;
+
+    &.empty {
+        opacity: 0.6;
+        font-style: italic;
+    }
+
+    &:hover {
+        background: var(--border);
+    }
+}
+
+.newTaskOptions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .dueDatePicker {
