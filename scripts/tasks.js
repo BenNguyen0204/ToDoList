@@ -44,10 +44,18 @@ setupDropdown("filterToggle", "filterMenu", (value) => {
 });
 
 // How the task list is ordered: "manual" (drag and drop), "earliest"/
-// "latest" (by due date), or "color".
-let currentSort = "manual";
+// "latest" (by due date), or "color". Remembered across reloads the same
+// way the dark-mode preference is (theme.js), via localStorage.
+let currentSort = localStorage.getItem("sortOrder") || "manual";
+
+// Make the radio that matches the saved preference show as selected,
+// since the HTML always marks "manual" as checked by default.
+const savedSortRadio = document.querySelector(`input[name="sort"][value="${currentSort}"]`);
+if (savedSortRadio) savedSortRadio.checked = true;
+
 setupDropdown("sortToggle", "sortMenu", (value) => {
     currentSort = value;
+    localStorage.setItem("sortOrder", value);
     renderTask();
 });
 
