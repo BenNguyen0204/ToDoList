@@ -1,21 +1,131 @@
+// Which tasks are currently shown: "all", "active" (not completed), or "completed".
+// This only affects display — it never deletes or changes task data.
 let currentFilter = "all";
 const filterToggle = document.getElementById("filterToggle");
 const filterMenu = document.getElementById("filterMenu");
 
+// Open/close the filter dropdown when its button is clicked.
 filterToggle.addEventListener("click", (e) => {
     e.stopPropagation();
     filterMenu.classList.toggle("open");
 });
 
+// Clicking anywhere outside the dropdown closes it...
 document.addEventListener("click", () => filterMenu.classList.remove("open"));
+// ...but clicking inside the dropdown itself shouldn't close it.
 filterMenu.addEventListener("click", (e) => e.stopPropagation());
 
+// When the user picks a different filter option, store it and re-render the list.
 document.querySelectorAll('input[name="filter"]').forEach(radio => {
     radio.addEventListener("change", () => {
         currentFilter = radio.value;
         renderTask();
     });
 });
+
+let currentSort = "manual";
+const sortToggle = document.getElementById("sortToggle");
+const sortMenu = document.getElementById("sortMenu");
+
+sortToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    sortMenu.classList.toggle("open");
+});
+
+document.addEventListener("click", () => sortMenu.classList.remove("open"));
+sortMenu.addEventListener("click", (e) => e.stopPropagation());
+
+document.querySelectorAll('input[name="sort"]').forEach(radio => {
+    radio.addEventListener("change", () => {
+        currentSort = radio.value;
+        sortMenu.classList.remove("open");
+        renderTask();
+    });
+});
+
+function sortTasks(tasks) {
+    if (currentSort === "earliest" || currentSort === "latest") {
+        // Tasks without a due date always sort to the end, regardless of direction.
+        const withDate = tasks.filter(t => t.dueDate);
+        const withoutDate = tasks.filter(t => !t.dueDate);
+        withDate.sort((a, b) => currentSort === "earliest"
+            ? a.dueDate.localeCompare(b.dueDate)
+            : b.dueDate.localeCompare(a.dueDate));
+        return [...withDate, ...withoutDate];
+    }
+
+    if (currentSort === "color") {
+        // Group by color, following the same order as the color picker.
+        // Tasks with no color always sort to the end.
+        const colorOrder = TASK_COLORS.map(c => c.value);
+        const withColor = tasks.filter(t => t.color);
+        const withoutColor = tasks.filter(t => !t.color);
+        withColor.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+        return [...withColor, ...withoutColor];
+    }
+
+    return tasks;
+}
+
+// dateStr is a "YYYY-MM-DD" string from an <input type="date">.
+// Parsing it manually (instead of `new Date(dateStr)`) avoids a timezone
+// shift that can push the date a day earlier/later than what was picked.
+function formatTaskDate(dateStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+let dueDatePicker = null;
+let dueDatePickerTaskId = null;
+
+function closeDueDatePicker() {
+    if (dueDatePicker) dueDatePicker.classList.remove("open");
+    dueDatePickerTaskId = null;
+}
+
+function setTaskDueDate(taskId, dateStr) {
+    const t = getTasks().find(t => t.id === taskId);
+    if (!t) return;
+    if (dateStr) t.dueDate = dateStr;
+    else delete t.dueDate;
+    saveTasks();
+    renderTask();
+}
+
+function buildDueDatePicker() {
+    dueDatePicker = document.createElement("input");
+    dueDatePicker.type = "date";
+    dueDatePicker.className = "dueDatePicker";
+    dueDatePicker.addEventListener("click", (e) => e.stopPropagation());
+    // Browsers fire "change" as soon as every segment (month/day/year) has
+    // *some* value, even mid-typing with an incomplete year (e.g. "0002").
+    // Save on every change so picking from the calendar still works, but
+    // only close once focus actually leaves the field, so typing a full
+    // 4-digit year isn't cut short.
+    dueDatePicker.addEventListener("change", () => {
+        setTaskDueDate(dueDatePickerTaskId, dueDatePicker.value);
+    });
+    dueDatePicker.addEventListener("blur", () => {
+        closeDueDatePicker();
+    });
+    document.body.appendChild(dueDatePicker);
+}
+
+function openDueDatePicker(anchor, taskId, currentValue) {
+    if (!dueDatePicker) buildDueDatePicker();
+    dueDatePickerTaskId = taskId;
+    dueDatePicker.value = currentValue || "";
+    const rect = anchor.getBoundingClientRect();
+    dueDatePicker.style.top = `${rect.bottom + 6}px`;
+    dueDatePicker.style.left = `${rect.left}px`;
+    dueDatePicker.classList.add("open");
+    dueDatePicker.focus();
+    if (dueDatePicker.showPicker) dueDatePicker.showPicker();
+}
+
+document.addEventListener("click", closeDueDatePicker);
+window.addEventListener("scroll", closeDueDatePicker, true);
+window.addEventListener("resize", closeDueDatePicker);
 
 const tasksList = document.getElementById("tasksList");
 const emptyState = document.getElementById("emptyState");
@@ -147,11 +257,12 @@ function renderTask() {
     }
 
     const tasks = getTasks();
-    const filtered = tasks.filter(t => {
+    // Keep only the tasks that match the active filter, then sort what's left.
+    const filtered = sortTasks(tasks.filter(t => {
         if (currentFilter === "active") return !t.completed;
         if (currentFilter === "completed") return t.completed;
-        return true;
-    });
+        return true; // "all" — no filtering
+    }));
 
     if (filtered.length === 0) {
         tasksList.style.display = "none";
@@ -166,7 +277,7 @@ function renderTask() {
     for (const task of filtered) {
         const li = document.createElement("li");
         li.dataset.id = String(task.id);
-        li.draggable = true;
+        li.draggable = currentSort === "manual";
         if (task.color) {
             li.dataset.color = "true";
             li.style.setProperty("--task-color", task.color);
@@ -201,6 +312,19 @@ function renderTask() {
         text.textContent = task.text;
         if (task.completed) text.classList.add("completed");
 
+        const dateButton = document.createElement("button");
+        dateButton.className = "dateButton";
+        if (task.dueDate) {
+            dateButton.textContent = formatTaskDate(task.dueDate);
+        } else {
+            dateButton.textContent = "Set due date";
+            dateButton.classList.add("empty");
+        }
+        dateButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openDueDatePicker(dateButton, task.id, task.dueDate);
+        });
+
         const editButton = document.createElement("button");
         editButton.className = "editButton";
         const editImg = document.createElement("img");
@@ -229,6 +353,7 @@ function renderTask() {
 
         const buttonGroup = document.createElement("div");
         buttonGroup.className = "buttonGroup";
+        buttonGroup.appendChild(dateButton);
         buttonGroup.appendChild(editButton);
         buttonGroup.appendChild(deleteButton);
 

@@ -2,7 +2,8 @@
     filter: invert(1);
 }
 
-.dark #filterToggle img {
+.dark #filterToggle img,
+.dark #sortToggle img {
     filter: invert(1);
 }
 
@@ -42,6 +43,7 @@
                 img {
                     width: 25px;
                     height: 25px;
+                    padding: 10px;
                     display: block;
                 }
             }
@@ -49,7 +51,7 @@
             .filterDropdown {
                 position: relative;
 
-                #filterToggle {
+                #filterToggle, #sortToggle {
                     background: transparent;
                     cursor: pointer;
                     padding: 5px;
@@ -61,6 +63,7 @@
                     img {
                         width: 25px;
                         height: 25px;
+                        padding: 10px;
                         display: block;
                     }
                 }
