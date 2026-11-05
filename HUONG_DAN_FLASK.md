@@ -1,10 +1,12 @@
-# Hướng dẫn: từ app JavaScript đến app Flask chạy trên server
+# Hướng dẫn (bản basic): từ app JavaScript đến app Flask chạy trên server
 
 Điểm xuất phát: app chạy hoàn toàn trên trình duyệt, dữ liệu nằm trong `localStorage`.
 
 Điểm đích: app Flask có tài khoản, dữ liệu nằm trong PostgreSQL, deploy lên Render + Neon, mở được trên mọi thiết bị.
 
 **Cách dùng file này:** làm theo thứ tự, mỗi bước có **Mục tiêu**, **Việc cần làm** và **Tự kiểm tra**. Chỉ qua bước sau khi phần kiểm tra đã đúng. Code ở đây chỉ là gợi ý ngắn, phần còn lại bạn tự viết. Tick `[x]` khi xong và commit sau mỗi giai đoạn.
+
+Đây là bản rút gọn: chỉ giữ những gì cần để app chạy đúng, an toàn ở mức cơ bản và đưa vào CV được. Các phần nâng cao nằm ở cuối file, làm sau nếu còn thời gian.
 
 ## Bức tranh tổng thể
 
@@ -21,7 +23,7 @@ Cấu trúc thư mục khi xong:
 ToDoList/
 ├── app/
 │   ├── __init__.py      # create_app(): tạo và cấu hình app
-│   ├── extensions.py    # db, migrate, login_manager, ...
+│   ├── extensions.py    # db, migrate, login_manager
 │   ├── models.py        # Các bảng trong database
 │   ├── pages.py         # Trả về trang HTML
 │   ├── api.py           # API JSON
@@ -228,7 +230,7 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 
 ## Giai đoạn 6: Tài khoản người dùng
 
-**Mục tiêu:** mỗi người chỉ thấy dữ liệu của mình. Thiếu bước này thì ai có link cũng đọc và xoá được hết.
+**Mục tiêu:** mỗi người chỉ thấy dữ liệu của mình. Thiếu bước này thì ai có link cũng đọc và xoá được hết, nên **không được bỏ** dù là bản basic.
 
 - [ ] Cài `flask-login`.
 - [ ] Thêm model `User`: `id`, `username` (unique, tối đa 32 ký tự), `password_hash` (String 255), `created_at`.
@@ -259,9 +261,9 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 
 ---
 
-## Giai đoạn 7: Cấu hình và bảo mật
+## Giai đoạn 7: Cấu hình cơ bản
 
-**Mục tiêu:** sẵn sàng cho môi trường public.
+**Mục tiêu:** không để lộ bí mật trong code, cookie an toàn ở mức cơ bản.
 
 - [ ] **SECRET_KEY:** đọc từ biến môi trường, thiếu thì `raise` ngay khi khởi động. Không hardcode trong code. Tạo khoá ngẫu nhiên:
   ```powershell
@@ -270,61 +272,35 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 - [ ] Tạo `.env` (không commit) và `.env.example` (commit, chỉ có giá trị mẫu).
 - [ ] **Cookie:** bật `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE="Lax"`, `SESSION_COOKIE_SECURE`, và các cấu hình `REMEMBER_COOKIE_*` tương ứng.
 - [ ] Cookie Secure chỉ gửi qua HTTPS, nên trên máy bạn sẽ đăng nhập xong lại bị đẩy về login. Hãy đọc biến `COOKIE_SECURE`, mặc định bật, và đặt `COOKIE_SECURE=0` trong `.env`.
-- [ ] **CSRF:** cài `flask-wtf`, bật `CSRFProtect`.
-  - Form HTML thêm `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />`.
-  - Trang chính thêm thẻ `<meta name="csrf-token" ...>`, JS đọc và gửi trong header `X-CSRFToken`.
-  - Đặt `WTF_CSRF_TIME_LIMIT = None`. Mặc định token hết hạn sau 1 giờ, nên tab mở lâu sẽ không lưu được.
-- [ ] **Giới hạn đăng nhập:** cài `flask-limiter`, cho phép 10 lần mỗi phút trên `/login`. Trên Render, IP nhìn thấy có thể là của proxy, nên hãy giới hạn theo username.
 - [ ] **Đóng đăng ký:** thêm biến `REGISTRATION_OPEN`, để sau khi có tài khoản thì chặn người lạ tạo thêm.
 
-**Tự kiểm tra:** xoá `.env` thì app báo lỗi rõ ràng khi chạy. Gọi `fetch` POST không có header CSRF nhận 400. Sai mật khẩu 11 lần nhận 429.
+**Tự kiểm tra:** xoá `.env` thì app báo lỗi rõ ràng khi chạy. Đăng nhập ở máy vẫn bình thường khi `COOKIE_SECURE=0`.
 
-**Cần hiểu:** CSRF là gì, cookie `SameSite` giúp gì? `HttpOnly` chống được loại tấn công nào?
+**Cần hiểu:** `SECRET_KEY` dùng để làm gì? `HttpOnly` chống được loại tấn công nào? `SameSite=Lax` giúp gì?
 
-**Commit:** `Harden configuration for production`
+**Commit:** `Move config to environment variables`
 
 ---
 
-## Giai đoạn 8: Viết test
+## Giai đoạn 8: Vài test quan trọng
 
-**Mục tiêu:** có thể sửa code mà không sợ làm hỏng phần khác.
+**Mục tiêu:** có test cho những chỗ dễ hỏng nhất. Không cần test hết mọi thứ.
 
 - [ ] Cài `pytest`, tạo `tests/test_app.py`.
-- [ ] Viết fixture tạo app với database tạm (dùng `tmp_path`), `TESTING=True`, tắt CSRF và rate limit, gọi `db.create_all()`.
-- [ ] Viết test cho các trường hợp sau:
-  - [ ] Chưa đăng nhập thì bị chặn.
-  - [ ] Đăng ký, đăng nhập, đăng xuất.
-  - [ ] Tạo, sửa, xoá list và task.
-  - [ ] PATCH một trường không làm đổi trường khác.
-  - [ ] Đổi thứ tự với id lạ.
-  - [ ] **Người dùng B không đụng được dữ liệu của A, trên mọi route.**
-  - [ ] Dữ liệu sai bị từ chối, dùng `@pytest.mark.parametrize`.
+- [ ] Viết fixture tạo app với database tạm (dùng `tmp_path`), `TESTING=True`, gọi `db.create_all()`.
+- [ ] Viết khoảng 4 test:
+  - [ ] Chưa đăng nhập thì `/api/lists` trả 401.
+  - [ ] Đăng ký, đăng nhập rồi gọi được API.
+  - [ ] Tạo, sửa, xoá một task.
+  - [ ] **Người dùng B không sửa hay xoá được task của A** (nhận 404).
 
-**Tự kiểm tra:** `pytest` xanh hết. Thử tạm xoá `user_id=current_user.id` trong `get_list_or_404`: test phải đỏ. Nếu vẫn xanh thì test chưa kiểm tra đúng thứ cần kiểm tra.
+**Tự kiểm tra:** `pytest` xanh hết. Thử tạm xoá `user_id=current_user.id` trong `get_list_or_404`: test cuối phải đỏ. Nếu vẫn xanh thì test chưa kiểm tra đúng thứ cần kiểm tra.
 
-**Commit:** `Add tests`
+**Commit:** `Add basic tests`
 
 ---
 
-## Giai đoạn 9: Giao diện điện thoại
-
-**Mục tiêu:** dùng thoải mái trên điện thoại. Hiện CSS chưa có `@media` nào.
-
-- [ ] Tạo `styles/responsive.css`, thêm vào `index.html` và thêm `@media (max-width: 700px)`:
-  - `body` xếp dọc, sidebar rộng 100%.
-  - Tiêu đề nhỏ lại, ô nhập task xếp dọc với các nút.
-  - Task cho phép xuống dòng (`flex-wrap`), chữ dài không tràn (`overflow-wrap: anywhere`).
-  - Ô nhập có `font-size: 16px`, nếu không iPhone sẽ tự phóng to khi bấm vào.
-
-**Tự kiểm tra:** DevTools bật chế độ thiết bị (`Ctrl+Shift+M`), chọn chiều rộng 390px: không có thanh cuộn ngang, mọi nút bấm được.
-
-**Lưu ý:** kéo thả HTML5 không chạy trên màn hình cảm ứng. Có thể coi đây là giới hạn đã biết, hoặc làm thêm nút lên và xuống nếu còn thời gian.
-
-**Commit:** `Add phone layout`
-
----
-
-## Giai đoạn 10: Chuyển sang PostgreSQL
+## Giai đoạn 9: Chuyển sang PostgreSQL
 
 **Mục tiêu:** code chạy được với database thật, không chỉ SQLite.
 
@@ -332,22 +308,15 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 - [ ] Đọc `DATABASE_URL` từ biến môi trường, nếu không có thì dùng SQLite.
 - [ ] Các dịch vụ đưa URL dạng `postgresql://...` hoặc `postgres://...`, còn SQLAlchemy cần biết driver. Hãy viết hàm đổi phần đầu thành `postgresql+psycopg://`.
 - [ ] Đặt `SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}`. Neon tắt database khi rảnh, nên phải kiểm tra kết nối trước khi dùng.
-- [ ] Không bắt buộc, nhưng nên thử bằng Docker trên máy (cần mở Docker Desktop trước):
-  ```powershell
-  docker run -d --rm --name todo-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=todo -p 127.0.0.1:55439:5432 postgres:17-alpine
-  ```
-  Đặt `DATABASE_URL=postgresql://postgres:test@127.0.0.1:55439/todo` trong `.env`, chạy `db upgrade`, rồi dùng thử app. Port 55432 trên máy bạn đang bị chương trình khác chiếm, nên ví dụ này dùng 55439.
+- [ ] Trên Neon, tạo một project riêng cho app này (đừng dùng chung với project khác). Đặt connection string vào `DATABASE_URL` trong `.env`, chạy `flask --app wsgi db upgrade`, rồi dùng thử app ở máy.
 
-**Tự kiểm tra:** chạy lệnh dưới đây và thấy dữ liệu vừa tạo. Xong thì xoá dòng `DATABASE_URL` khỏi `.env`.
-```powershell
-docker exec todo-pg psql -U postgres -d todo -c "select * from tasks"
-```
+**Tự kiểm tra:** mở SQL Editor trên Neon, chạy `select * from tasks;` và thấy task vừa tạo ở máy.
 
 **Commit:** `Support PostgreSQL`
 
 ---
 
-## Giai đoạn 11: Deploy lên Render + Neon
+## Giai đoạn 10: Deploy lên Render + Neon
 
 **Mục tiêu:** app có link public. Giao diện của Render và Neon có thể khác đôi chút so với mô tả.
 
@@ -357,13 +326,12 @@ docker exec todo-pg psql -U postgres -d todo -c "select * from tasks"
   ```python
   app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
   ```
-- [ ] Cập nhật `README.md`: bỏ phần "mở `index.html`", thêm cách chạy và mô tả tính năng mới.
+- [ ] Cập nhật `README.md`: bỏ phần "mở `index.html`", thêm link demo, cách chạy và mô tả tính năng mới.
 - [ ] Merge vào `main` và push lên GitHub. Kiểm tra `.env` không có trong commit:
   ```powershell
   git ls-files | Select-String "\.env"
   ```
   Kết quả chỉ được có `.env.example`.
-- [ ] **Neon:** tạo tài khoản, tạo project, copy connection string. Giữ bí mật chuỗi này vì nó chứa mật khẩu.
 - [ ] **Render:** tạo **New > Web Service**, chọn repo, gói Free, rồi điền:
 
   | Mục | Giá trị |
@@ -377,7 +345,7 @@ docker exec todo-pg psql -U postgres -d todo -c "select * from tasks"
   | Biến | Giá trị |
   | --- | --- |
   | `SECRET_KEY` | Chuỗi ngẫu nhiên mới, khác với ở máy |
-  | `DATABASE_URL` | Connection string của Neon |
+  | `DATABASE_URL` | Connection string của Neon. Giữ bí mật vì nó chứa mật khẩu |
   | `PYTHON_VERSION` | `3.13.5`, hoặc đúng bản bạn đang dùng |
 
 - [ ] Deploy và đọc tab Logs. Nếu lỗi, hãy đọc dòng lỗi cuối cùng trước tiên.
@@ -385,32 +353,38 @@ docker exec todo-pg psql -U postgres -d todo -c "select * from tasks"
 **Vì sao như vậy:**
 - `gunicorn` thay cho `flask run`, vì server dev của Flask không dành cho production. Gunicorn không chạy trên Windows, nên ở máy bạn vẫn dùng `flask run`.
 - `db upgrade` chạy trước `gunicorn`, để database luôn khớp với code.
-- `--workers 1` vì gói Free ít RAM, và rate limit đang lưu trong RAM của từng worker.
+- `--workers 1` vì gói Free ít RAM.
 
 **Tự kiểm tra sau khi deploy:**
 - [ ] Mở link, thấy trang đăng nhập, thanh địa chỉ có HTTPS.
 - [ ] Tạo tài khoản, thêm task, tải lại trang.
 - [ ] Đăng nhập trên điện thoại bằng dữ liệu di động, thấy cùng dữ liệu.
-- [ ] Sửa trên điện thoại, quay lại tab trên máy tính, thấy thay đổi.
 - [ ] Đặt `REGISTRATION_OPEN=0` trên Render. Thử đăng ký phải bị chặn, đăng nhập vẫn được.
 
 **Lưu ý:** gói Free ngủ khi không có truy cập, nên lần mở đầu tiên có thể mất tới một phút. Hãy kiểm tra giới hạn hiện tại của Render và Neon vì chúng có thể thay đổi.
 
+**Commit:** `Deploy to Render`
+
 ---
 
-## Giai đoạn 12: Sau khi deploy
-
-Quy trình mỗi lần cập nhật:
+## Quy trình mỗi lần cập nhật
 
 1. Sửa code trên một nhánh mới, chạy thử ở máy, chạy `pytest`.
 2. Nếu đổi `models.py`, tạo migration và đọc lại file sinh ra.
 3. Merge vào `main` và push. Render tự deploy và tự chạy migration.
 
-Việc làm thêm nếu muốn:
-- Nhập dữ liệu cũ từ `localStorage`, vì dữ liệu cũ vẫn nằm trong trình duyệt của bạn.
-- Thêm nút lên và xuống để sắp xếp trên điện thoại.
-- Chạy `pytest` tự động bằng GitHub Actions khi push.
-- Tự động cập nhật theo thời gian thực bằng polling hoặc WebSocket.
+---
+
+## Làm thêm nếu còn thời gian (không bắt buộc)
+
+Xếp theo thứ tự nên làm trước:
+
+- **CSRF:** cài `flask-wtf`, bật `CSRFProtect`. Form HTML thêm `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />`. Trang chính thêm thẻ `<meta name="csrf-token" ...>`, JS đọc và gửi trong header `X-CSRFToken`. Đặt `WTF_CSRF_TIME_LIMIT = None` để tab mở lâu vẫn lưu được. Nhớ tắt CSRF trong fixture test.
+- **Giới hạn đăng nhập:** cài `flask-limiter`, cho phép 10 lần mỗi phút trên `/login`, giới hạn theo username vì IP trên Render có thể là của proxy.
+- **Thêm test:** PATCH một trường không đổi trường khác, đổi thứ tự với id lạ, dữ liệu sai bị từ chối (dùng `@pytest.mark.parametrize`).
+- **Giao diện điện thoại:** tạo `styles/responsive.css` với `@media (max-width: 700px)`: sidebar rộng 100%, task `flex-wrap`, chữ dài `overflow-wrap: anywhere`, ô nhập `font-size: 16px` để iPhone không tự phóng to. Kéo thả HTML5 không chạy trên màn hình cảm ứng, có thể thêm nút lên và xuống.
+- **GitHub Actions:** chạy `pytest` tự động mỗi lần push.
+- **Nhập dữ liệu cũ** từ `localStorage` lên server.
 
 ---
 
@@ -422,7 +396,6 @@ Việc làm thêm nếu muốn:
 | `db migrate` không thấy bảng nào | `create_app()` chưa import models |
 | CSS hoặc ảnh lỗi 404 | Chưa dùng `url_for`, hoặc JS vẫn dùng đường dẫn cũ |
 | Đăng nhập xong lại về `/login` | Cookie Secure trên HTTP, cần `COOKIE_SECURE=0` trong `.env` |
-| POST báo 400 "CSRF token missing" | Thiếu `csrf_token` trong form, hoặc thiếu header `X-CSRFToken` |
 | `SECRET_KEY is not set` | Thiếu `.env`, hoặc đang đứng sai thư mục |
 | Chạy ở máy được, trên Render báo lỗi driver | Thiếu `psycopg` hoặc chưa đổi URL sang `postgresql+psycopg://` |
 | Trên Render thỉnh thoảng lỗi kết nối database | Thiếu `pool_pre_ping` |
@@ -434,8 +407,8 @@ Việc làm thêm nếu muốn:
 2. Vì sao mỗi thao tác gửi một request thay vì gửi cả danh sách?
 3. Làm sao đảm bảo người dùng này không đọc được dữ liệu của người khác?
 4. Mật khẩu được lưu thế nào? Session hoạt động ra sao?
-5. CSRF là gì và project chống nó thế nào?
-6. Migration để làm gì? Thêm cột bắt buộc vào bảng đã có dữ liệu thì xử lý sao?
-7. Vì sao không dùng `flask run` trên production?
-8. `SECRET_KEY` để làm gì? Nếu lộ thì chuyện gì xảy ra?
+5. Migration để làm gì? Thêm cột bắt buộc vào bảng đã có dữ liệu thì xử lý sao?
+6. Vì sao không dùng `flask run` trên production?
+7. `SECRET_KEY` để làm gì? Nếu lộ thì chuyện gì xảy ra?
+8. CSRF là gì? Project của bạn đã chống nó chưa, nếu chưa thì sẽ làm thế nào?
 9. Nếu có 10.000 người dùng thì phần nào sẽ gặp vấn đề trước?
