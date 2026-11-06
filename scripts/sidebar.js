@@ -80,7 +80,13 @@ function renderSidebar() {
             input.focus();
             input.select();
 
+            // finished: Escape gọi renderSidebar() gỡ ô nhập, việc đó kích hoạt blur.
+            // Không có cờ này thì blur sẽ lưu luôn tên mới dù đã bấm Escape.
+            let finished = false;
+
             const save = () => {
+                if (finished) return;
+                finished = true;
                 const newName = input.value.trim();
 
                 if (newName) {
@@ -95,7 +101,10 @@ function renderSidebar() {
             input.addEventListener("blur", save);
             input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") save();
-                if (e.key === "Escape") renderSidebar();
+                if (e.key === "Escape") {
+                    finished = true;
+                    renderSidebar();
+                }
             });
         });
 
@@ -133,7 +142,7 @@ function renderSidebar() {
 }
 
 newListButton.addEventListener("click", () => {
-    showNameToast("Name your new list:", (name) => {
+    showInputToast("Name your new list:", "", (name) => {
         const newList = { id: Date.now(), name, tasks: [] };
         lists.push(newList);
         currentListId = newList.id;
@@ -143,5 +152,5 @@ newListButton.addEventListener("click", () => {
 
         renderSidebar();
         renderTask();
-    });
+    }, "List name...");
 });
