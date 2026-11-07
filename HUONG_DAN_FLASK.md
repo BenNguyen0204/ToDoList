@@ -200,21 +200,20 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
   - `save(method, path, body)` bọc `apiRequest`, bắt lỗi và báo cho người dùng qua `showToast`.
   - `loadLists()` gọi `GET /api/lists`.
 - [ ] Sửa `main.js`: `lists` ban đầu là `[]`, gọi `await loadLists()` rồi mới render. Thử tắt server để xem lỗi được xử lý thế nào.
-- [ ] Đổi từng thao tác và tick khi xong:
+- [ ] **Task:** nhờ đã refactor, mọi thay đổi task đều nằm trong 4 hàm của `taskActions.js`. Chỉ cần sửa bên trong 4 hàm đó, phần vẽ, popup và bộ lọc giữ nguyên:
+  - [ ] `addTask`: đợi server trả về task (có `id` do server cấp) rồi mới thêm vào mảng. Trong `submitNewTask` của `taskRender.js`, ô nhập đã được xoá trước khi gọi `addTask`, nên bấm Enter hai lần không tạo trùng.
+  - [ ] `updateTask(id, changes)`: cập nhật giao diện trước, rồi gửi `PATCH /api/tasks/<id>` với đúng `changes`. Xoá màu hay xoá ngày là gửi `null`.
+  - [ ] `deleteTask`: gửi `DELETE /api/tasks/<id>`.
+  - [ ] `reorderTasks`: giữ logic `slots`, rồi gửi `PUT /api/lists/<id>/order` với `taskIds` là id của **toàn bộ** task theo thứ tự mới.
+- [ ] **List** (trong `sidebar.js`):
   - [ ] Tạo list: đợi server trả về rồi mới thêm, vì server cấp `id`.
-  - [ ] Đổi tên và xoá list.
-  - [ ] Thêm task: tương tự, xoá ô nhập trước khi đợi để bấm Enter hai lần không tạo trùng.
-  - [ ] Tick hoàn thành, đổi màu, đổi ngày. Nên có một hàm chung `updateTask(id, changes)`, và dùng `null` thay cho `delete t.color`.
-  - [ ] Sửa nội dung task: `showEditToast` đang giữ `index`, hãy đổi sang `id` vì vị trí có thể thay đổi.
-  - [ ] Xoá task.
-  - [ ] Kéo thả.
+  - [ ] Đổi tên và xoá list. Cẩn thận: `sidebar.js` có một hàm cục bộ tên `save` trong phần đổi tên, sẽ trùng tên nếu bạn đặt hàm toàn cục cũng là `save`. Đổi tên một trong hai.
 - [ ] Giữ `localStorage` cho `theme`, `sortOrder`, `currentListId`. Đây là tuỳ chọn của từng thiết bị, không cần lưu lên server.
 - [ ] Làm mới khi quay lại tab: lắng nghe `visibilitychange` và gọi lại `loadLists()`. Bỏ qua nếu còn request đang lưu dở, nếu không dữ liệu cũ có thể đè lên thay đổi vừa làm.
 
-**Hai bug có sẵn trong code JS, nên sửa luôn ở bước này:**
+**Lưu ý về `id` cũ:** dữ liệu trong `localStorage` dùng `id: Date.now()`. Từ bước này `id` do database cấp, nên dữ liệu cũ trong `localStorage` sẽ không dùng nữa. App bắt đầu trống, đó là bình thường.
 
-1. **Mất task khi kéo thả lúc đang lọc.** Trong `dragover`, `newOrder` chỉ gồm các task đang hiện, nên nếu đang lọc "Active" thì task đã xong bị xoá vĩnh viễn khi lưu. Hãy tính thứ tự ở `dragend`, cho các task đang hiện đổi chỗ trong các vị trí của chính chúng, và giữ nguyên task bị ẩn.
-2. **Escape khi đổi tên list vẫn có thể lưu.** Escape gọi render lại, ô nhập bị gỡ, sự kiện `blur` chạy và lưu tên mới. Hãy thêm một biến cờ `finished`. Cẩn thận: hàm cục bộ `save` trong `sidebar.js` sẽ trùng tên nếu bạn đặt hàm toàn cục cũng là `save`.
+**Hai bug cũ (kéo thả khi đang lọc làm mất task, Escape khi đổi tên list vẫn lưu) đã được sửa lúc refactor.** Khi đổi sang API, đừng làm mất 2 bản sửa này: giữ logic `slots` trong `reorderTasks` và cờ `finished` trong `sidebar.js`.
 
 **Tự kiểm tra:**
 - Làm từng thao tác, tải lại trang, dữ liệu vẫn còn.
@@ -261,9 +260,9 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 
 ---
 
-## Giai đoạn 7: Cấu hình cơ bản
+## Giai đoạn 7: Cấu hình và bảo mật
 
-**Mục tiêu:** không để lộ bí mật trong code, cookie an toàn ở mức cơ bản.
+**Mục tiêu:** không để lộ bí mật trong code, sẵn sàng cho môi trường public.
 
 - [ ] **SECRET_KEY:** đọc từ biến môi trường, thiếu thì `raise` ngay khi khởi động. Không hardcode trong code. Tạo khoá ngẫu nhiên:
   ```powershell
@@ -272,13 +271,21 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 - [ ] Tạo `.env` (không commit) và `.env.example` (commit, chỉ có giá trị mẫu).
 - [ ] **Cookie:** bật `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE="Lax"`, `SESSION_COOKIE_SECURE`, và các cấu hình `REMEMBER_COOKIE_*` tương ứng.
 - [ ] Cookie Secure chỉ gửi qua HTTPS, nên trên máy bạn sẽ đăng nhập xong lại bị đẩy về login. Hãy đọc biến `COOKIE_SECURE`, mặc định bật, và đặt `COOKIE_SECURE=0` trong `.env`.
+- [ ] **CSRF:** cài `flask-wtf`, bật `CSRFProtect` trong `extensions.py` và `init_app(app)`.
+  - Form HTML (đăng ký, đăng nhập, đăng xuất) thêm `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />`.
+  - Trang chính thêm `<meta name="csrf-token" content="{{ csrf_token() }}" />`. Trong `apiRequest`, JS đọc thẻ này và gửi trong header `X-CSRFToken` với mọi request không phải GET.
+  - Đặt `WTF_CSRF_TIME_LIMIT = None`. Mặc định token hết hạn sau 1 giờ, nên tab mở lâu sẽ không lưu được.
+- [ ] **Giới hạn đăng nhập:** cài `flask-limiter`, cho phép 10 lần mỗi phút trên `/login`. Trên Render, IP nhìn thấy có thể là của proxy, nên hãy giới hạn theo username (dùng `key_func` đọc username từ form).
 - [ ] **Đóng đăng ký:** thêm biến `REGISTRATION_OPEN`, để sau khi có tài khoản thì chặn người lạ tạo thêm.
 
-**Tự kiểm tra:** xoá `.env` thì app báo lỗi rõ ràng khi chạy. Đăng nhập ở máy vẫn bình thường khi `COOKIE_SECURE=0`.
+**Tự kiểm tra:**
+- Xoá `.env` thì app báo lỗi rõ ràng khi chạy. Đăng nhập ở máy vẫn bình thường khi `COOKIE_SECURE=0`.
+- Gọi `fetch` POST trong Console mà không có header `X-CSRFToken` thì nhận 400. Mọi thao tác trong app vẫn lưu được.
+- Sai mật khẩu 11 lần liên tiếp thì nhận 429.
 
-**Cần hiểu:** `SECRET_KEY` dùng để làm gì? `HttpOnly` chống được loại tấn công nào? `SameSite=Lax` giúp gì?
+**Cần hiểu:** `SECRET_KEY` dùng để làm gì? CSRF là gì, và cookie `SameSite` giúp gì? `HttpOnly` chống được loại tấn công nào? Vì sao rate limit theo username chứ không theo IP?
 
-**Commit:** `Move config to environment variables`
+**Commit:** `Harden configuration for production`
 
 ---
 
@@ -287,7 +294,7 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 **Mục tiêu:** có test cho những chỗ dễ hỏng nhất. Không cần test hết mọi thứ.
 
 - [ ] Cài `pytest`, tạo `tests/test_app.py`.
-- [ ] Viết fixture tạo app với database tạm (dùng `tmp_path`), `TESTING=True`, gọi `db.create_all()`.
+- [ ] Viết fixture tạo app với database tạm (dùng `tmp_path`), `TESTING=True`, tắt CSRF (`WTF_CSRF_ENABLED=False`) và rate limit (`RATELIMIT_ENABLED=False`), gọi `db.create_all()`.
 - [ ] Viết khoảng 4 test:
   - [ ] Chưa đăng nhập thì `/api/lists` trả 401.
   - [ ] Đăng ký, đăng nhập rồi gọi được API.
@@ -353,7 +360,7 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 **Vì sao như vậy:**
 - `gunicorn` thay cho `flask run`, vì server dev của Flask không dành cho production. Gunicorn không chạy trên Windows, nên ở máy bạn vẫn dùng `flask run`.
 - `db upgrade` chạy trước `gunicorn`, để database luôn khớp với code.
-- `--workers 1` vì gói Free ít RAM.
+- `--workers 1` vì gói Free ít RAM, và rate limit đang lưu trong RAM của từng worker. Nhiều worker thì mỗi worker đếm riêng, giới hạn sẽ bị nhân lên.
 
 **Tự kiểm tra sau khi deploy:**
 - [ ] Mở link, thấy trang đăng nhập, thanh địa chỉ có HTTPS.
@@ -379,8 +386,6 @@ Thử cả trường hợp sai: tên rỗng, màu `"red"`, id không tồn tại
 
 Xếp theo thứ tự nên làm trước:
 
-- **CSRF:** cài `flask-wtf`, bật `CSRFProtect`. Form HTML thêm `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />`. Trang chính thêm thẻ `<meta name="csrf-token" ...>`, JS đọc và gửi trong header `X-CSRFToken`. Đặt `WTF_CSRF_TIME_LIMIT = None` để tab mở lâu vẫn lưu được. Nhớ tắt CSRF trong fixture test.
-- **Giới hạn đăng nhập:** cài `flask-limiter`, cho phép 10 lần mỗi phút trên `/login`, giới hạn theo username vì IP trên Render có thể là của proxy.
 - **Thêm test:** PATCH một trường không đổi trường khác, đổi thứ tự với id lạ, dữ liệu sai bị từ chối (dùng `@pytest.mark.parametrize`).
 - **Giao diện điện thoại:** tạo `styles/responsive.css` với `@media (max-width: 700px)`: sidebar rộng 100%, task `flex-wrap`, chữ dài `overflow-wrap: anywhere`, ô nhập `font-size: 16px` để iPhone không tự phóng to. Kéo thả HTML5 không chạy trên màn hình cảm ứng, có thể thêm nút lên và xuống.
 - **GitHub Actions:** chạy `pytest` tự động mỗi lần push.
@@ -396,6 +401,8 @@ Xếp theo thứ tự nên làm trước:
 | `db migrate` không thấy bảng nào | `create_app()` chưa import models |
 | CSS hoặc ảnh lỗi 404 | Chưa dùng `url_for`, hoặc JS vẫn dùng đường dẫn cũ |
 | Đăng nhập xong lại về `/login` | Cookie Secure trên HTTP, cần `COOKIE_SECURE=0` trong `.env` |
+| POST báo 400 "CSRF token missing" | Thiếu `csrf_token` trong form, hoặc thiếu header `X-CSRFToken` |
+| Test đăng nhập bị 400 hoặc 429 | Fixture chưa tắt CSRF hoặc rate limit |
 | `SECRET_KEY is not set` | Thiếu `.env`, hoặc đang đứng sai thư mục |
 | Chạy ở máy được, trên Render báo lỗi driver | Thiếu `psycopg` hoặc chưa đổi URL sang `postgresql+psycopg://` |
 | Trên Render thỉnh thoảng lỗi kết nối database | Thiếu `pool_pre_ping` |
@@ -410,5 +417,5 @@ Xếp theo thứ tự nên làm trước:
 5. Migration để làm gì? Thêm cột bắt buộc vào bảng đã có dữ liệu thì xử lý sao?
 6. Vì sao không dùng `flask run` trên production?
 7. `SECRET_KEY` để làm gì? Nếu lộ thì chuyện gì xảy ra?
-8. CSRF là gì? Project của bạn đã chống nó chưa, nếu chưa thì sẽ làm thế nào?
+8. CSRF là gì và project chống nó thế nào? Rate limit đăng nhập hoạt động ra sao?
 9. Nếu có 10.000 người dùng thì phần nào sẽ gặp vấn đề trước?
