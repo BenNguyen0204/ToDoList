@@ -5,17 +5,18 @@
     justify-content: center;
     height: 100vh;
     gap: 12px;
-    opacity: 0.4;
     text-align: center;
 
     h2 {
         font-family: 'Bitcount Grid Double Ink', monospace;
         font-size: 36px;
         margin: 0;
+        opacity: 0.4;
     }
 
     p {
         font-size: 14px;
         margin: 0;
+        opacity: 0.4;
     }
 }

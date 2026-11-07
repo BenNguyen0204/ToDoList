@@ -76,10 +76,10 @@ function buildTaskItem(task) {
         openDueDatePicker(dateButton, task.dueDate, (dueDate) => updateTask(task.id, { dueDate }));
     });
 
-    const editButton = createIconButton("editButton", "images/edit.png", "Edit", () => {
+    const editButton = createIconButton("editButton", "/static/images/edit.png", "Edit", () => {
         showInputToast("Edit task:", task.text, (newText) => updateTask(task.id, { text: newText }));
     });
-    const deleteButton = createIconButton("deleteButton", "images/delete.png", "Delete", () => {
+    const deleteButton = createIconButton("deleteButton", "/static/images/delete.png", "Delete", () => {
         deleteTask(task.id);
     });
 

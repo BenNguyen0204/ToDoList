@@ -1,10 +1,27 @@
-.dark #themeButton img {
+.dark .themeButton img {
     filter: invert(1);
 }
 
 .dark #filterToggle img,
 .dark #sortToggle img {
     filter: invert(1);
+}
+
+.themeButton {
+    background: transparent;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 100px;
+    border: 2px solid var(--button-border);
+
+    &:hover { background: var(--border); }
+
+    img {
+        width: 25px;
+        height: 25px;
+        padding: 6px;
+        display: block;
+    }
 }
 
 .app {
@@ -31,22 +48,6 @@
             display: flex;
             gap: 10px;
 
-            #themeButton {
-                background: transparent;
-                cursor: pointer;
-                padding: 8px;
-                border-radius: 100px;
-                border: 2px solid var(--button-border);
-
-                &:hover { background: var(--border); }
-
-                img {
-                    width: 32px;
-                    height: 32px;
-                    display: block;
-                }
-            }
-
             .filterDropdown {
                 position: relative;
 
@@ -60,8 +61,9 @@
                     &:hover { background: var(--border); }
 
                     img {
-                        width: 32px;
-                        height: 32px;
+                        width: 25px;
+                        height: 25px;
+                        padding: 6px;
                         display: block;
                     }
                 }

@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles/variables.css" />
-    <link rel="stylesheet" href="styles/base.css" />
-    <link rel="stylesheet" href="styles/sidebar.css" />
-    <link rel="stylesheet" href="styles/app.css" />
-    <link rel="stylesheet" href="styles/tasks.css" />
-    <link rel="stylesheet" href="styles/toast.css" />
-    <link rel="stylesheet" href="styles/welcome.css" />
-    <title>Document</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/variables.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/sidebar.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/app.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/tasks.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/toast.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/welcome.css') }}" />
+    <title>To-do List</title>
 </head>
 
 <body>
@@ -30,7 +30,7 @@
                 <div class="buttons">
                     <div class="filterDropdown" id="filterDropdown">
                         <button id="filterToggle">
-                            <img src="images/filter.png" alt="Filter" />
+                            <img src="{{ url_for('static', filename='images/filter.png') }}" alt="Filter" />
                         </button>
                         <div class="filterMenu" id="filterMenu">
                             <label><input type="radio" name="filter" value="all" checked /> All</label>
@@ -40,7 +40,7 @@
                     </div>
                     <div class="filterDropdown" id="sortDropdown">
                         <button id="sortToggle">
-                            <img src="images/sort.svg" alt="Sort" />
+                            <img src="{{ url_for('static', filename='images/sort.svg') }}" alt="Sort" />
                         </button>
                         <div class="filterMenu" id="sortMenu">
                             <label><input type="radio" name="sort" value="manual" checked /> Manual order</label>
@@ -49,8 +49,8 @@
                             <label><input type="radio" name="sort" value="color" /> By color</label>
                         </div>
                     </div>
-                    <button id="themeButton">
-                        <img src="images/darkMode.png" alt="Theme Button" />
+                    <button id="themeButton" class="themeButton">
+                        <img src="{{ url_for('static', filename='images/darkMode.png') }}" alt="Theme Button" />
                     </button>
                 </div>
             </div>
@@ -75,6 +75,9 @@
         <div class="welcomeState" id="welcomeState">
             <h2>Welcome to your To-Do List</h2>
             <p>Create a new list to get started</p>
+            <button id="welcomeThemeButton" class="themeButton" aria-label="Toggle dark mode">
+                <img src="{{ url_for('static', filename='images/darkMode.png') }}" alt="Theme Button" />
+            </button>
         </div>
 
         <div class="tasksDiv">
@@ -92,15 +95,15 @@
     </div>
     <div id="overlay" class="overlay"></div>
 
-    <script src="scripts/storage.js"></script>
-    <script src="scripts/toast.js"></script>
-    <script src="scripts/pickers.js"></script>
-    <script src="scripts/controls.js"></script>
-    <script src="scripts/taskActions.js"></script>
-    <script src="scripts/taskRender.js"></script>
-    <script src="scripts/sidebar.js"></script>
-    <script src="scripts/theme.js"></script>
-    <script src="scripts/main.js"></script>
+    <script src="{{ url_for('static', filename='scripts/storage.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/toast.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/pickers.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/controls.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/taskActions.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/taskRender.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>
 </body>
 
 </html>

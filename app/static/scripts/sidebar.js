@@ -64,7 +64,7 @@ function renderSidebar() {
         editBtn.className = "editListBtn";
 
         const editImg = document.createElement("img");
-        editImg.src = "images/edit.png";
+        editImg.src = "/static/images/edit.png";
         editImg.alt = "Edit";
         editBtn.appendChild(editImg);
 
@@ -112,7 +112,7 @@ function renderSidebar() {
         deleteBtn.className = "deleteListBtn";
 
         const deleteImg = document.createElement("img");
-        deleteImg.src = "images/delete.png";
+        deleteImg.src = "/static/images/delete.png";
         deleteImg.alt = "Delete";
         deleteBtn.appendChild(deleteImg);
 

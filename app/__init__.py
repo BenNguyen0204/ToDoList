@@ -1,10 +1,8 @@
-from flask import Flask
+from flask import Flask, render_template
 
 def create_app():
     app = Flask(__name__)
-    
-    @app.route('/')
-    def hello():
-        return 'Hello, World!'
+    from .pages import blueprint as pages_blueprint
+    app.register_blueprint(pages_blueprint)
     
     return app
