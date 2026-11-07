@@ -14,7 +14,7 @@ function addTask(text, color, dueDate) {
 }
 
 // changes chỉ chứa các trường muốn đổi, ví dụ { completed: true } hoặc { color: null }.
-function updateTask(id, changes) {
+async function updateTask(id, changes) {
     const task = findTask(id);
     if (!task) return;
     Object.assign(task, changes);

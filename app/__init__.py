@@ -12,5 +12,8 @@ def create_app():
 
     from .pages import blueprint as pages_blueprint
     app.register_blueprint(pages_blueprint)
-    
+
+    from .api import blueprint as api_blueprint
+    app.register_blueprint(api_blueprint, url_prefix="/api")
+
     return app

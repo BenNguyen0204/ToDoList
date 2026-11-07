@@ -17,6 +17,9 @@
 - **Dark mode** — toggle between light and dark theme, persists on reload
 - **Persistent storage** — all lists, tasks, and theme saved to localStorage
 
+## Planning
+- **Send email to user to remind**
+
 ## Getting Started
 1. Clone or download the repository
 2. Open `index.html` in your browser

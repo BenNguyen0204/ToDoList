@@ -91,6 +91,103 @@ Nếu thiếu header `Content-Type: application/json`, `request.get_json()` sẽ
 
 ---
 
+## Luồng khi đổi tên list
+
+Ví dụ đổi tên list có id 5:
+
+```text
+1. Sửa tên, nhấn Enter hoặc bấm ra ngoài   (trình duyệt)
+        ↓
+2. JS gửi PATCH /api/lists/5               (apiSave, kèm {"name": "Việc nhà"})
+        ↓
+3. Flask chạy update_list(list_id=5)       (lấy 5 từ URL)
+        ↓
+4. get_list_or_404(5)                      (tìm list, không có thì trả 404)
+        ↓
+5. get_json_body()                         (đọc JSON, sai định dạng thì trả 400)
+        ↓
+6. todo_list.name = validate_text(...)     (mới đổi trong session, chưa lưu hẳn)
+        ↓
+7. db.session.commit()                     (lưu vào database)
+        ↓
+8. return jsonify(todo_list.to_dict())     (trả list đã sửa về cho JS, status 200)
+        ↓
+9. JS cập nhật list.name, vẽ lại giao diện
+```
+
+So với luồng thêm list, có 2 điểm khác:
+
+- id đã có sẵn nên nằm trên URL. Khi thêm list, database mới cấp id lúc `commit()`.
+- Không cần `db.session.add()` vì object lấy từ database đã nằm trong session.
+
+---
+
+## Id được tạo và luân chuyển thế nào
+
+Database sinh ra id một lần duy nhất, backend gửi nó cho frontend, rồi frontend gửi lại trên URL mỗi khi muốn thao tác với list đó. Ví dụ list mới được cấp id 5:
+
+```text
+ CHUẨN BỊ (làm một lần)
+ models.py:9            id = db.Column(db.Integer, primary_key=True)
+    ↓ flask db migrate + flask db upgrade
+ instance/todo.db       bảng lists có cột id tự cấp số
+
+
+ TẠO LIST
+ Trình duyệt   bấm +, nhập tên
+    ↓ POST /api/lists   {"name": "Việc nhà"}      ← chưa có id
+ Flask         create_list() → add() → commit()
+    ↓ INSERT
+ Database      thêm dòng mới, TỰ CẤP id = 5       ← id ra đời ở đây
+    ↓
+ Flask         todo_list.id = 5
+    ↓ to_dict() + jsonify, trả 201
+ Trình duyệt   {"id": 5, "name": "Việc nhà", "tasks": []}
+
+
+ FRONTEND GIỮ ID
+ lists                  có phần tử {id: 5, ...}
+ currentListId = 5      list đang chọn
+ localStorage           nhớ currentListId sau khi tải lại trang
+
+
+ DÙNG LẠI ID
+ Trình duyệt   đổi tên list
+    ↓ PATCH /api/lists/5   {"name": "Đi học"}     ← id nằm trên URL
+ Flask         <int:list_id> → update_list(list_id=5)
+    ↓ get_list_or_404(5)
+ Database      tìm dòng có id = 5, cập nhật rồi lưu
+
+
+ TẢI LẠI TRANG
+ loadList()    GET /api/lists → backend trả mọi list kèm id
+               currentListId còn trong lists thì giữ, không thì lấy list đầu
+
+
+ TASK GẮN VỚI LIST
+ tasks.list_id = 5      ghi lại task này thuộc list có id 5
+```
+
+Id mang tên khác nhau ở mỗi nơi, nhưng vẫn là cùng một số:
+
+| Nơi | Tên |
+|---|---|
+| Database, bảng `lists` | `id` |
+| Database, bảng `tasks` | `list_id` |
+| Object Python | `todo_list.id` |
+| JSON gửi cho JS | `"id"` |
+| Biến JS | `list.id`, `currentListId` |
+| URL | `/api/lists/5` |
+| Tham số Flask | `list_id` |
+
+3 điều nên nhớ:
+
+1. Chỉ database tạo id. Các nơi khác chỉ lưu và chuyển tiếp nó.
+2. Tạo mới thì chưa có id, các thao tác sau thì phải có. Vì vậy `POST /lists` không có id trên URL, còn `PATCH /lists/5` thì có.
+3. Id gửi từ client không được tin ngay. `get_list_or_404` kiểm tra nó có tồn tại không, và sau này còn phải kiểm tra list đó có thuộc user hiện tại không.
+
+---
+
 ## Các phương thức khác
 
 Một REST API cho task thường có đủ các route sau:
