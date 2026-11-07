@@ -1,6 +1,31 @@
+# Môi trường ảo
 .venv/
 venv/
+
+# File Python tự sinh
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Mật khẩu, khóa bí mật
 .env
+.env.*
+!.env.example
+
+# Database trên máy
 instance/
+*.db
+*.sqlite3
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Log
+*.log
+
+# Editor và hệ điều hành
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
