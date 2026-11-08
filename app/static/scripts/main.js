@@ -1,10 +1,7 @@
-// Mảng chứa toàn bộ list và task, giữ trong bộ nhớ của trình duyệt.
-// Mọi file JS khác đều dùng chung biến này. loadList() sẽ gán lại nó bằng dữ liệu từ server.
-let lists = getLists();
-// Vì currentListId chỉ là lựa chọn giao diện, không phải dữ liệu của người dùng.
-// Nó dùng để nhớ list nào đang mở, để khi tải lại trang (F5) bạn vẫn ở đúng list đó.
-// localStorage chỉ lưu chuỗi, nên Number() đổi "5" thành 5.
-let currentListId = Number(localStorage.getItem("currentListId")) || (lists[0]?.id ?? null);
+// Biến toàn cục, mọi file JS khác đều dùng.
+// lists ban đầu rỗng: phải đợi tải từ server.
+let lists = [];
+let currentListId = Number(localStorage.getItem("currentListId")) || null;
 
 // Chạy khi mở trang: lấy dữ liệu từ server trước, rồi mới vẽ giao diện.
 async function init() {
