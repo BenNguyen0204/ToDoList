@@ -13,11 +13,11 @@ function el(tag, props = {}, children = []) {
     return node;
 }
 
-// one "label   value" line
-function detailRow(label, value) {
-    return el("div", { className: "accountRow" }, [
+// one cell of the grey info box: small grey label on top, value under it
+function infoItem(label, value) {
+    return el("div", { className: "accountInfoItem" }, [
         el("span", { className: "accountLabel", textContent: label }),
-        el("span", { textContent: value }),
+        el("span", { className: "accountValue", textContent: value }),
     ]);
 }
 
@@ -28,11 +28,26 @@ function setStatus(status, text, ok) {
 }
 
 function buildAccountPanel(account) {
-    // DETAILS
-    const details = el("div", { className: "accountSection" }, [
-        el("h3", { textContent: "Account" }),
-        detailRow("Username", account.username),
-        detailRow("Member since", formatTaskDate(account.createdAt)),
+    // HEADER: title, one line under it, x to close
+    const header = el("div", { className: "accountHeader" }, [
+        el("div", {}, [
+            el("h2", { textContent: "Account" }),
+            el("p", { className: "accountSubtitle", textContent: "Manage your profile and security options." }),
+        ]),
+        el("button", {
+            type: "button",
+            className: "accountClose",
+            textContent: "\u00d7",
+            title: "Close",
+            ariaLabel: "Close",
+            onclick: closeToast,
+        }),
+    ]);
+
+    // DETAILS: grey box, 2 columns
+    const details = el("div", { className: "accountInfo" }, [
+        infoItem("Username", account.username),
+        infoItem("Member since", formatTaskDate(account.createdAt)),
     ]);
 
     // DISPLAY NAME
@@ -46,8 +61,11 @@ function buildAccountPanel(account) {
     const nameStatus = el("p", { className: "accountStatus" });
     const nameForm = el("form", { className: "accountSection" }, [
         el("h3", { textContent: "Display name" }),
-        nameInput,
-        el("button", { type: "submit", className: "accountButton", textContent: "Save name" }),
+        // input and button side by side
+        el("div", { className: "accountInline" }, [
+            nameInput,
+            el("button", { type: "submit", className: "accountButton", textContent: "Save name" }),
+        ]),
         nameStatus,
     ]);
     nameForm.addEventListener("submit", async (e) => {
@@ -63,8 +81,6 @@ function buildAccountPanel(account) {
             setStatus(nameStatus, err.message, false);
         }
     });
-
-    
 
     // EMAIL
     // optional. once it's verified you get an email the day before a task is due
@@ -95,12 +111,12 @@ function buildAccountPanel(account) {
 
     const emailForm = el("form", { className: "accountSection" }, [
         el("h3", { textContent: "Email" }),
-        emailInput,
-        emailState,
-        el("div", { className: "accountActions" }, [
+        el("div", { className: "accountInline" }, [
+            emailInput,
             el("button", { type: "submit", className: "accountButton", textContent: "Save email" }),
-            resendButton,
         ]),
+        // "verified / not verified" text, with the resend link next to it when it's waiting
+        el("div", { className: "accountHintRow" }, [emailState, resendButton]),
         emailStatus,
     ]);
     emailForm.addEventListener("submit", async (e) => {
@@ -136,7 +152,10 @@ function buildAccountPanel(account) {
     const passwordForm = el("form", { className: "accountSection" }, [
         el("h3", { textContent: "Change password" }),
         usernameHint, currentInput, newInput, confirmInput,
-        el("button", { type: "submit", className: "accountButton", textContent: "Change password" }),
+        // button on its own row, pushed to the right
+        el("div", { className: "accountActions" }, [
+            el("button", { type: "submit", className: "accountButton", textContent: "Change password" }),
+        ]),
         passwordStatus,
     ]);
     passwordForm.addEventListener("submit", async (e) => {
@@ -160,7 +179,10 @@ function buildAccountPanel(account) {
         }
     });
 
-    return el("div", { className: "accountPanel" }, [details, nameForm, emailForm, passwordForm]);
+    return el("div", { className: "accountPanel" }, [
+        header,
+        el("div", { className: "accountBody" }, [details, nameForm, emailForm, passwordForm]),
+    ]);
 }
 
 // reminders go out for "tomorrow" in your timezone, so the server needs to know it.

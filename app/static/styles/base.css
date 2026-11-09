@@ -51,7 +51,8 @@ input {
     z-index: 999;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s ease;
+    /* visibility too, otherwise it vanishes instantly on close instead of fading with the toast */
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .overlay.show {
