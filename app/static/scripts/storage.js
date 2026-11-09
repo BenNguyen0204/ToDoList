@@ -10,7 +10,7 @@ async function apiRequest(method, path, body) {
     const response = await fetch(path, options);
 
     if (!response.ok) {
-        throw new Error('${method} ${path} failed: ${response.status}');
+        throw new Error(`${method} ${path} failed: ${response.status}`);
     }
 
     // 204 la no content
@@ -23,7 +23,7 @@ async function apiRequest(method, path, body) {
 // Lưu xong (thành công hay lỗi đều vậy, nhờ finally) thì pendingSaves--
 
 async function apiSave(method, path, body) {
-    pendingSave++;
+    pendingSaves++;
     try {
         return await apiRequest(method, path, body)
     } catch (e) {

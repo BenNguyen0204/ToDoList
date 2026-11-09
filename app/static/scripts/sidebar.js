@@ -89,13 +89,16 @@ function renderSidebar() {
                 finished = true;
                 const newName = input.value.trim();
 
-                if (newName) {
-                    list.name = newName;
-                    saveLists(lists);
+                if (!newName || newName === list.name) {
+                    renderSidebar();               // không đổi gì thì chỉ vẽ lại
+                    return;
                 }
 
-                renderSidebar();
+                list.name = newName;
+                renderSidebar();                   // vẽ trước
                 renderTask();
+                // rồi lưu. Không cần await: không có gì phải làm tiếp sau khi lưu xong
+                apiSave("PATCH", `/api/lists/${list.id}`, { name: newName });
             };
 
             input.addEventListener("blur", save);
@@ -126,10 +129,11 @@ function renderSidebar() {
                 localStorage.setItem("currentListId", currentListId);
             }
 
-            saveLists(lists);
             listTitle.textContent = getCurrentList()?.name || "";
             renderSidebar();
             renderTask();
+            // Xoá list trên server, database tự xoá luôn task của nó (cascade)
+            apiSave("DELETE", `/api/lists/${list.id}`);
         });
 
         li.appendChild(span);
@@ -142,13 +146,14 @@ function renderSidebar() {
 }
 
 newListButton.addEventListener("click", () => {
-    showInputToast("Name your new list:", "", (name) => {
-        const newList = { id: Date.now(), name, tasks: [] };
+    showInputToast("Name your new list:", "", async (name) => {
+        // Đợi server tạo list và cấp id rồi mới thêm vào giao diện
+        const newList = await apiSave("POST", "/api/lists", { name });
+        if (!newList) return;
+
         lists.push(newList);
         currentListId = newList.id;
-
         localStorage.setItem("currentListId", currentListId);
-        saveLists(lists);
 
         renderSidebar();
         renderTask();

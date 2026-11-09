@@ -10,7 +10,7 @@ async function init() {
     } catch(e) {
         // Tải lỗi thì báo cho người dùng và dừng lại, vì chưa có dữ liệu để vẽ.
         // Truyền init vào toast để người dùng có thể thử tải lại.
-        console.eror(e);
+        console.error(e);
         showToast("Couldn't load your lists. Try again?", init);
         return;
     }
@@ -29,7 +29,7 @@ document.addEventListener("visibilitychange", async () => {
     try {
         await loadList();
         renderSidebar();
-        rendereTask();
+        renderTask();
     } catch (err) {
         // Đây chỉ là làm mới ngầm, nên lỗi thì ghi vào console, không làm phiền người dùng.
         console.error(err);

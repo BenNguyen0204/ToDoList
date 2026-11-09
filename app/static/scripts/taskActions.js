@@ -7,9 +7,13 @@ function findTask(id) {
     return getTasks().find(t => t.id === id);
 }
 
-function addTask(text, color, dueDate) {
-    getTasks().push({ id: Date.now(), text, completed: false, color, dueDate });
-    saveTasks();
+async function addTask(text, color, dueDate) {
+    const listId = currentListId;
+    const task = await apiSave("POST", `/api/lists/${listId}/tasks`, {text, color, dueDate});
+    if (!task) return;
+
+    const list = lists.find(l => l.id === listId);
+    if (list) list.tasks.push(task);
     renderTask();
 }
 
@@ -18,15 +22,15 @@ async function updateTask(id, changes) {
     const task = findTask(id);
     if (!task) return;
     Object.assign(task, changes);
-    saveTasks();
     renderTask();
+    await apiSave("PATCH", `/api/tasks/${id}`, changes);
 }
 
-function deleteTask(id) {
+async function deleteTask(id) {
     const list = getCurrentList();
     list.tasks = list.tasks.filter(t => t.id !== id);
-    saveTasks();
     renderTask();
+    await apiSave("DELETE", `/api/tasks/${id}`);
 }
 
 // visibleIds: id của các task ĐANG HIỆN, theo thứ tự mới trên màn hình.
@@ -34,16 +38,18 @@ function deleteTask(id) {
 // trong đúng những vị trí chúng đang chiếm.
 //   Ví dụ: [A✓, B, C✓, D], lọc Active, kéo D lên trên B
 //   -> vị trí của B, D là [1, 3] -> đặt D vào 1, B vào 3 -> [A✓, D, C✓, B]
-function reorderTasks(visibleIds) {
-    const tasks = getTasks();
+async function reorderTasks(visibleIds) {
+    const list = getCurrentList();
+    const tasks = list.tasks;
     const visibleTasks = visibleIds.map(id => tasks.find(t => String(t.id) === id));
-
+ 
     const slots = [];
     tasks.forEach((t, i) => {
         if (visibleIds.includes(String(t.id))) slots.push(i);
     });
     slots.forEach((slot, k) => { tasks[slot] = visibleTasks[k]; });
-
-    saveTasks();
+ 
     renderTask();
+    // Gửi id của TOÀN BỘ task theo thứ tự mới, không chỉ task đang hiện
+    await apiSave("PUT", `/api/lists/${list.id}/order`, { taskIds: tasks.map(t => t.id) });
 }
