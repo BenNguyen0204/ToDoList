@@ -40,10 +40,14 @@ class TodoList(db.Model):
 
     # one list -> many tasks, deleting a list deletes its tasks
     tasks = db.relationship(
-        "Task",  # string bc Task is defined below
-        back_populates="todo_list",  # keeps task.todo_list in sync
-        cascade="all, delete-orphan",  # also deletes a task if it's removed from the list
-        order_by="Task.position",  # drag & drop order
+        # string bc Task is defined below
+        "Task",
+        # keeps task.todo_list in sync
+        back_populates="todo_list",
+        # also deletes a task if it's removed from the list
+        cascade="all, delete-orphan",
+        # drag & drop order
+        order_by="Task.position",
     )
     
     # so flask can send it as json
@@ -62,9 +66,11 @@ class Task(db.Model):
     # which list the task is in (FK goes on the "many" side)
     list_id = db.Column(
         db.Integer,
-        db.ForeignKey("lists.id", ondelete="CASCADE"),  # db level cascade, sqlite ignores it unless foreign keys are turned on
+        # db level cascade, sqlite ignores it unless foreign keys are turned on
+        db.ForeignKey("lists.id", ondelete="CASCADE"),
         nullable=False,
-        index=True  # postgres doesn't index FKs by itself
+        # postgres doesn't index FKs by itself
+        index=True
     )
 
     # max 500 chars, required

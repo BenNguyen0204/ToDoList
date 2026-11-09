@@ -65,7 +65,8 @@ function openDueDatePicker(anchor, currentValue, onSelect) {
 
 // COLOR
 const colorPopup = createAnchoredPopup("div", "colorPicker");
-let colorPickerOwner = null;    // which button opened it, clicking it again closes it
+// which button opened it, clicking it again closes it
+let colorPickerOwner = null;
 let colorOnSelect = null;
 
 function addColorOption(className, title, value) {

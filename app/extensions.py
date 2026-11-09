@@ -11,11 +11,16 @@ from sqlalchemy import MetaData
 
 # naming convention for constraints, alembic needs the names to alter/drop them later
 convention = {
-    "ix": "ix_%(column_0_label)s",  # ix_tasks_list_id
-    "uq": "uq_%(table_name)s_%(column_0_name)s",  # uq_users_username
-    "ck": "ck_%(table_name)s_%(constraint_name)s",  # ck_tasks_valid_color
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",  # fk_tasks_list_id_lists
-    "pk": "pk_%(table_name)s"  # pk_tasks
+    # ix_tasks_list_id
+    "ix": "ix_%(column_0_label)s",
+    # uq_users_username
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    # ck_tasks_valid_color
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    # fk_tasks_list_id_lists
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    # pk_tasks
+    "pk": "pk_%(table_name)s"
 }
 
 # MetaData covers every table so the convention applies to all of them

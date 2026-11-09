@@ -85,7 +85,8 @@ def get_lists():
     # instead of one query per list (WHERE list_id = 1, then 2, ...)
     query = (
         db.select(TodoList)
-        .where(TodoList.user_id == current_user.id)  # only my lists
+        # only my lists
+        .where(TodoList.user_id == current_user.id)
         .options(selectinload(TodoList.tasks))
         .order_by(TodoList.id)
     )
@@ -98,10 +99,13 @@ def create_list():
     name = validate_text(data.get("name"), "name", 100)
     # returns {"id": 5, "name": "Chores", "tasks": []}
  
-    todo_list = TodoList(name=name, user_id=current_user.id)  # new list belongs to me
+    # new list belongs to me
+    todo_list = TodoList(name=name, user_id=current_user.id)
     db.session.add(todo_list)
-    db.session.commit()          # id gets assigned here
-    return jsonify(todo_list.to_dict()), 201   # 201 = created
+    # id gets assigned here
+    db.session.commit()
+    # 201 = created
+    return jsonify(todo_list.to_dict()), 201
 
 @blueprint.patch("/lists/<int:list_id>")
 def update_list(list_id):
@@ -117,9 +121,11 @@ def update_list(list_id):
 @blueprint.delete("/lists/<int:list_id>")
 def delete_list(list_id):
     todo_list = get_list_or_404(list_id)
-    db.session.delete(todo_list)   # tasks go too (cascade)
+    # tasks go too (cascade)
+    db.session.delete(todo_list)
     db.session.commit()
-    return "", 204                 # 204 = ok, nothing to return
+    # 204 = ok, nothing to return
+    return "", 204
 
 # ---------- tasks ----------
 @blueprint.post("/lists/<int:list_id>/tasks")

@@ -49,7 +49,8 @@ setupDropdown("sortToggle", "sortMenu", (value) => {
 function sortTasks(tasks) {
     if (currentSort === "earliest" || currentSort === "latest") {
         const withDate = tasks.filter(t => t.dueDate);
-        const withoutDate = tasks.filter(t => !t.dueDate);   // no due date -> always last
+        // no due date -> always last
+        const withoutDate = tasks.filter(t => !t.dueDate);
         withDate.sort((a, b) => currentSort === "earliest"
             ? a.dueDate.localeCompare(b.dueDate)
             : b.dueDate.localeCompare(a.dueDate));
@@ -57,9 +58,11 @@ function sortTasks(tasks) {
     }
 
     if (currentSort === "color") {
-        const colorOrder = TASK_COLORS.map(c => c.value);   // same order as the picker
+        // same order as the picker
+        const colorOrder = TASK_COLORS.map(c => c.value);
         const withColor = tasks.filter(t => t.color);
-        const withoutColor = tasks.filter(t => !t.color);   // no color -> always last
+        // no color -> always last
+        const withoutColor = tasks.filter(t => !t.color);
         withColor.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
         return [...withColor, ...withoutColor];
     }

@@ -25,7 +25,8 @@ def create_app(test_config=None):
     cookie_secure = env_flag("COOKIE_SECURE", True)
 
     app.config.update(
-        SQLALCHEMY_DATABASE_URI="sqlite:///todo.db",  # ends up in instance/
+        # ends up in instance/
+        SQLALCHEMY_DATABASE_URI="sqlite:///todo.db",
 
         # signs the session cookie so nobody can fake being logged in. comes from .env, never from git
         SECRET_KEY=os.environ.get("SECRET_KEY"),
