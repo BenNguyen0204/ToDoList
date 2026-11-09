@@ -67,6 +67,9 @@
 
         .main {
             display: block !important;
+            /* body is display:block on phones, so .main is only as tall as its content.
+               fill at least the whole screen so the background pattern covers it */
+            min-height: 100dvh;
         }
     }
 
