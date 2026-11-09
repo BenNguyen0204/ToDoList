@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {# viewport-fit=cover lets mobile.css keep things clear of the iphone home bar #}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     {# storage.js reads this and sends it as the X-CSRFToken header on every change #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/variables.css') }}" />
@@ -13,6 +14,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/tasks.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/toast.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/welcome.css') }}" />
+    {# last so the phone layout wins #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/mobile.css') }}" />
     <title>To-do List</title>
 </head>
 
@@ -41,6 +44,8 @@
     <div class="main">
         <div class="app">
             <div class="topBar">
+                {# phones only (mobile.css), goes back to the lists screen #}
+                <button type="button" id="backToLists" class="backButton">‹ Lists</button>
                 <h1 id="listTitle">To-Do List</h1>
                 <div class="buttons">
                     <div class="filterDropdown" id="filterDropdown">
@@ -118,6 +123,7 @@
     <script src="{{ url_for('static', filename='scripts/taskActions.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/taskRender.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/mobile.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/account.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>

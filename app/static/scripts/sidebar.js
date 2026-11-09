@@ -49,12 +49,16 @@ function renderSidebar() {
         const li = document.createElement("li");
         if (list.id === currentListId) li.classList.add("active");
 
-        li.addEventListener("click", () => {
+        li.addEventListener("click", (e) => {
+            // clicking inside the rename box shouldn't count as opening the list
+            if (e.target.closest("input")) return;
             currentListId = list.id;
             localStorage.setItem("currentListId", currentListId);
             listTitle.textContent = list.name;
             renderSidebar();
             renderTask();
+            // mobile.js, does nothing on a computer
+            openListOnPhone();
         });
 
         const span = document.createElement("span");
@@ -157,5 +161,7 @@ newListButton.addEventListener("click", () => {
 
         renderSidebar();
         renderTask();
+        // straight into the new list on a phone
+        openListOnPhone();
     }, "List name...");
 });
