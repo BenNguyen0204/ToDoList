@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {# storage.js reads this and sends it as the X-CSRFToken header on every change #}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/variables.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/sidebar.css') }}" />
@@ -27,6 +29,7 @@
             <span class="username" title="{{ current_user.username }}">{{ current_user.username }}</span>
             {# a form so logout is a POST, see auth.py #}
             <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit" class="logoutButton">Log out</button>
             </form>
         </div>

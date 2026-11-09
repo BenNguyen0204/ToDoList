@@ -7,6 +7,10 @@
             options.headers["Content-Type"] = "application/json";
             options.body = JSON.stringify(body);
         }
+        // csrf token from the page (stage 7), needed for everything except GET
+        if (method !== "GET") {
+            options.headers["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;
+        }
         const response = await fetch(path, options);
         const text = await response.text();
         return { status: response.status, data: text ? JSON.parse(text) : null };

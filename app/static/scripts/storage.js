@@ -1,10 +1,17 @@
 let pendingSaves = 0;
 
+// csrf token flask put in <meta name="csrf-token"> (index.html)
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
 async function apiRequest(method, path, body) {
     const options = {method: method, headers: {} };
     if (body !== undefined) {
         options.headers["Content-Type"] = "application/json";
         options.body = JSON.stringify(body);
+    }
+    // every change (POST, PATCH, PUT, DELETE) has to carry the token, GET doesn't need it
+    if (method !== "GET") {
+        options.headers["X-CSRFToken"] = csrfToken;
     }
 
     const response = await fetch(path, options);

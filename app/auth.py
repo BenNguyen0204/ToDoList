@@ -1,12 +1,12 @@
 # register / login / logout. these are normal html pages (forms), not json
 import re
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .extensions import db
+from .extensions import client_ip, db, limiter
 from .models import User
 
 blueprint = Blueprint("auth", __name__)
@@ -25,12 +25,33 @@ def read_form():
     return username, password
 
 
+# rate limit key for login: the username being tried.
+# limiting only by ip isn't enough on its own: lots of people can share one ip (school wifi)
+def username_key():
+    return "user:" + (request.form.get("username", "").strip().lower() or client_ip())
+
+
+# too many attempts -> limiter raises a 429. show it on the form instead of a bare error page
+@blueprint.errorhandler(429)
+def too_many_attempts(error):
+    mode = "register" if request.endpoint == "auth.register" else "login"
+    flash("Too many attempts. Wait a minute and try again.")
+    return render_template("auth.html", mode=mode, username=""), 429
+
+
 @blueprint.route("/register", methods=["GET", "POST"])
+# max 10 sign-ups per hour from one ip, stops a script from making thousands of accounts
+@limiter.limit("10 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("pages.index"))
 
     username = ""
+    if not current_app.config["REGISTRATION_OPEN"]:
+        if request.method == "POST":
+            flash("Sign-ups are closed")
+        return render_template("auth.html", mode="register", username=username), 403
+
     if request.method == "POST":
         username, password = read_form()
 
@@ -56,6 +77,11 @@ def register():
 
 
 @blueprint.route("/login", methods=["GET", "POST"])
+# only POSTs count (just opening the page shouldn't).
+# 10/min per username stops guessing one account's password,
+# 30/min per ip stops one person trying lots of different usernames
+@limiter.limit("10 per minute", methods=["POST"], key_func=username_key)
+@limiter.limit("30 per minute", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("pages.index"))
