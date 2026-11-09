@@ -66,6 +66,66 @@ function buildAccountPanel(account) {
 
     
 
+    // EMAIL
+    // optional. once it's verified you get an email the day before a task is due
+    const emailInput = el("input", {
+        type: "email",
+        className: "toastInput",
+        value: account.email || "",
+        placeholder: "you@example.com",
+        autocomplete: "email",
+        maxLength: 254,
+    });
+    const emailState = el("p", { className: "accountHint" });
+    const resendButton = el("button", { type: "button", className: "accountLink", textContent: "Resend link" });
+    const emailStatus = el("p", { className: "accountStatus" });
+
+    // the line under the input: verified or not, and the resend button when it's waiting
+    function showEmailState(acc) {
+        resendButton.hidden = !acc.email || acc.emailVerified;
+        if (!acc.email) {
+            emailState.textContent = "Add an email to get a reminder the day before a task is due.";
+        } else if (acc.emailVerified) {
+            emailState.textContent = "✓ Verified. Reminders are on.";
+        } else {
+            emailState.textContent = "Not verified yet. Check your inbox for the link.";
+        }
+    }
+    showEmailState(account);
+
+    const emailForm = el("form", { className: "accountSection" }, [
+        el("h3", { textContent: "Email" }),
+        emailInput,
+        emailState,
+        el("div", { className: "accountActions" }, [
+            el("button", { type: "submit", className: "accountButton", textContent: "Save email" }),
+            resendButton,
+        ]),
+        emailStatus,
+    ]);
+    emailForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+            const updated = await apiRequest("PUT", "/api/account/email", { email: emailInput.value });
+            emailInput.value = updated.email || "";
+            showEmailState(updated);
+            if (updated.warning) setStatus(emailStatus, updated.warning, false);
+            else if (!updated.email) setStatus(emailStatus, "Email removed", true);
+            else if (!updated.emailVerified) setStatus(emailStatus, "Saved. We sent you a verification link.", true);
+            else setStatus(emailStatus, "Saved", true);
+        } catch (err) {
+            setStatus(emailStatus, err.message, false);
+        }
+    });
+    resendButton.addEventListener("click", async () => {
+        try {
+            await apiRequest("POST", "/api/account/email/resend");
+            setStatus(emailStatus, "Sent. Check your inbox.", true);
+        } catch (err) {
+            setStatus(emailStatus, err.message, false);
+        }
+    });
+
     // PASSWORD
     // hidden username field so the browser's password manager knows which account this is
     const usernameHint = el("input", { type: "text", value: account.username, autocomplete: "username", hidden: true });
@@ -100,8 +160,25 @@ function buildAccountPanel(account) {
         }
     });
 
-    return el("div", { className: "accountPanel" }, [details, nameForm, passwordForm]);
+    return el("div", { className: "accountPanel" }, [details, nameForm, emailForm, passwordForm]);
 }
+
+// reminders go out for "tomorrow" in your timezone, so the server needs to know it.
+// only sends it when it's different from what the server has (first visit, or you moved)
+async function syncTimezone() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!zone) return;
+    try {
+        const account = await apiRequest("GET", "/api/account");
+        if (account.timezone !== zone) {
+            await apiRequest("PATCH", "/api/account", { timezone: zone });
+        }
+    } catch (err) {
+        // not worth bothering the user, reminders just use UTC until next time
+        console.error(err);
+    }
+}
+syncTimezone();
 
 accountInfoButton.addEventListener("click", async () => {
     try {

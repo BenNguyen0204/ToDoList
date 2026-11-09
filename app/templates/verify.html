@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/variables.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/auth.css') }}" />
+    <title>Verify email - To-do List</title>
+</head>
+
+<body>
+    <script>
+        // same dark mode setting as the main page
+        if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
+    </script>
+
+    {# the page you land on from the link in the verification email (auth.py verify_email) #}
+    <main class="authCard">
+        {% if ok %}
+            <h1>Email verified</h1>
+            <p>Reminders for tasks due tomorrow will go to <strong>{{ email }}</strong>.</p>
+        {% else %}
+            <h1>Link doesn't work</h1>
+            <p class="authError">It's expired (links last 24 hours) or your email changed since it was sent.
+                Open your account (the i next to your name) and press "Resend link".</p>
+        {% endif %}
+        <p class="authSwitch"><a href="{{ url_for('pages.index') }}">Go to my lists</a></p>
+    </main>
+</body>
+
+</html>

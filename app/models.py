@@ -15,6 +15,14 @@ class User(UserMixin, db.Model):
     # the name shown in the app. can be anything and doesn't have to be unique.
     # empty -> we show the username instead
     display_name = db.Column(db.String(50))
+    # optional, stored lowercase. unique so a reminder can't go to two accounts.
+    # 254 = longest an email address can be
+    email = db.Column(db.String(254), unique=True)
+    # when they clicked the link in the verification email. None = not verified,
+    # and we never send reminders to an unverified address
+    email_verified_at = db.Column(db.DateTime)
+    # like "America/Toronto", sent by the browser. decides what "tomorrow" means for reminders
+    timezone = db.Column(db.String(64))
     # never the real password, only the hash from generate_password_hash
     password_hash = db.Column(db.String(255), nullable=False)
     # lambda so it runs on every insert, not once when the file loads
@@ -33,6 +41,9 @@ class User(UserMixin, db.Model):
         return {
             "username": self.username,
             "displayName": self.display_name,
+            "email": self.email,
+            "emailVerified": self.email_verified_at is not None,
+            "timezone": self.timezone,
             # date only, "2026-11-09", the JS formats it like the due dates
             "createdAt": self.created_at.date().isoformat(),
         }
@@ -100,6 +111,9 @@ class Task(db.Model):
     due_date = db.Column(db.Date)
     # drag & drop order, the db doesn't keep row order
     position = db.Column(db.Integer, nullable=False, default=0)
+    # the due date we already sent a reminder for. if the due date changes,
+    # it won't match anymore so the new date gets its own reminder
+    reminded_for = db.Column(db.Date)
 
     # task.todo_list, other side of TodoList.tasks
     todo_list = db.relationship("TodoList", back_populates="tasks")

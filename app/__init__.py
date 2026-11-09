@@ -51,6 +51,15 @@ def create_app(test_config=None):
 
         # set REGISTRATION_OPEN=0 once your account exists, so strangers can't sign up
         REGISTRATION_OPEN=env_flag("REGISTRATION_OPEN", True),
+
+        # email through brevo. no key -> emails are printed in the terminal instead (see mailer.py)
+        BREVO_API_KEY=os.environ.get("BREVO_API_KEY"),
+        # has to be an address you verified as a sender in brevo
+        MAIL_SENDER=os.environ.get("MAIL_SENDER"),
+        MAIL_SENDER_NAME=os.environ.get("MAIL_SENDER_NAME", "To-do List"),
+
+        # github actions sends this to /internal/send-reminders. not set -> that url is turned off
+        REMINDER_TOKEN=os.environ.get("REMINDER_TOKEN"),
     )
 
     # tests (stage 8) pass their own settings here: temp database, csrf off, etc.
@@ -61,6 +70,9 @@ def create_app(test_config=None):
     # fail loudly at startup instead of running with no key
     if not app.config["SECRET_KEY"]:
         raise RuntimeError("SECRET_KEY is not set. Copy .env.example to .env and fill it in.")
+    # a key without a sender would fail on every email, better to find out now
+    if app.config["BREVO_API_KEY"] and not app.config["MAIL_SENDER"]:
+        raise RuntimeError("BREVO_API_KEY is set but MAIL_SENDER isn't. Add it to .env.")
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -92,5 +104,10 @@ def create_app(test_config=None):
     from .api import blueprint as api_blueprint, register_error_handlers
     app.register_blueprint(api_blueprint, url_prefix="/api")
     register_error_handlers(app)
+
+    from .reminders import blueprint as reminders_blueprint
+    # github actions has no page to get a csrf token from. the REMINDER_TOKEN check protects it instead
+    csrf.exempt(reminders_blueprint)
+    app.register_blueprint(reminders_blueprint)
 
     return app

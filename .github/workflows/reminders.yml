@@ -1,0 +1,31 @@
+# once a day, ask the app to email everyone whose tasks are due tomorrow (app/reminders.py).
+# needs 2 repo secrets (Settings -> Secrets and variables -> Actions):
+#   APP_URL         like https://your-app.onrender.com (no / at the end)
+#   REMINDER_TOKEN  same value as REMINDER_TOKEN on render
+name: Due date reminders
+
+on:
+  schedule:
+    # 13:00 UTC = morning in Canada, evening in Vietnam. "tomorrow" is worked out per user's timezone.
+    # github can start scheduled runs a bit late, that's fine here
+    - cron: "0 13 * * *"
+  # adds a "Run workflow" button in the Actions tab, for testing
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    # job level, not on the step: a step's if can't see that same step's env
+    env:
+      APP_URL: ${{ secrets.APP_URL }}
+      REMINDER_TOKEN: ${{ secrets.REMINDER_TOKEN }}
+    steps:
+      - name: Call the app
+        # skip until the app is deployed and the secrets exist, so it doesn't fail every day
+        if: env.APP_URL != ''
+        # retries bc render's free plan sleeps and takes up to a minute to wake up
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 30 --retry-all-errors --max-time 120 \
+            -X POST -H "Authorization: Bearer $REMINDER_TOKEN" \
+            "$APP_URL/internal/send-reminders"

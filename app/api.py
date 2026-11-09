@@ -1,12 +1,15 @@
 import re
 from datetime import date
-from flask import Blueprint, abort, jsonify, request
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from flask import Blueprint, abort, current_app, jsonify, request
 from flask_login import current_user, login_required
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from werkzeug.security import check_password_hash, generate_password_hash
 from .auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
 from .extensions import client_ip, db, limiter
+from .mailer import send_verification_email
 from .models import Task, TodoList
 
 blueprint = Blueprint("api", __name__)
@@ -234,8 +237,90 @@ def update_account():
         # empty clears it, then the app shows the username again
         current_user.display_name = value or None
 
+    # sent by account.js when the browser's timezone changes. used for reminders
+    if "timezone" in data:
+        value = data["timezone"]
+        try:
+            if not isinstance(value, str) or len(value) > 64:
+                raise ValueError
+            # throws if it's not a real timezone
+            ZoneInfo(value)
+        except (ValueError, ZoneInfoNotFoundError):
+            abort(400, "timezone must be something like America/Toronto")
+        current_user.timezone = value
+
     db.session.commit()
     return jsonify(current_user.to_dict())
+
+# good enough check: something@something.something, no spaces.
+# the real check is the verification email
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# both email routes send an email, so they share one counter.
+# otherwise someone could use the app to spam any address
+def email_key():
+    return f"email:{current_user.id}" if current_user.is_authenticated else client_ip()
+
+email_limit = limiter.shared_limit("5 per hour", scope="account-email", key_func=email_key,
+                                   error_message="Too many emails. Wait an hour and try again.")
+
+# send the link, but don't fail the whole request if brevo is down.
+# returns an error message for the JS, or None if it worked
+def try_send_verification():
+    try:
+        send_verification_email(current_user)
+        return None
+    except Exception:
+        current_app.logger.exception("verification email to user %s failed", current_user.id)
+        return "Saved, but the verification email couldn't be sent. Try \"Resend link\" later."
+
+@blueprint.put("/account/email")
+@email_limit
+def set_email():
+    data = get_json_body()
+    value = data.get("email")
+    if value is not None and not isinstance(value, str):
+        abort(400, "email must be a string")
+    value = (value or "").strip().lower()
+
+    # empty = remove it, reminders stop
+    if not value:
+        current_user.email = None
+        current_user.email_verified_at = None
+        db.session.commit()
+        return jsonify(current_user.to_dict())
+
+    if len(value) > 254 or not EMAIL_PATTERN.match(value):
+        abort(400, "That doesn't look like an email address")
+    # same email again: nothing to do, don't send another email
+    if value == current_user.email:
+        return jsonify(current_user.to_dict())
+
+    current_user.email = value
+    # new address -> has to be verified again
+    current_user.email_verified_at = None
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # unique constraint, another account has it
+        db.session.rollback()
+        abort(400, "That email is already used by another account")
+
+    result = current_user.to_dict()
+    result["warning"] = try_send_verification()
+    return jsonify(result)
+
+@blueprint.post("/account/email/resend")
+@email_limit
+def resend_verification():
+    if not current_user.email:
+        abort(400, "Add an email first")
+    if current_user.email_verified_at:
+        abort(400, "Your email is already verified")
+    error = try_send_verification()
+    if error:
+        abort(502, "The email couldn't be sent. Try again later.")
+    return "", 204
 
 # limiter runs before require_login, so there might not be a user yet
 def password_change_key():
@@ -275,8 +360,8 @@ def register_error_handlers(app):
         # normal pages keep flask's default error page
         return error
  
-    # 429 = rate limited (password change)
-    for code in (400, 404, 405, 429):
+    # 429 = rate limited (password change, emails). 502 = brevo didn't take the email
+    for code in (400, 404, 405, 429, 502):
         app.register_error_handler(code, handle_error)
 
 

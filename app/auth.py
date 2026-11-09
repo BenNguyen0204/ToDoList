@@ -1,5 +1,6 @@
 # register / login / logout. these are normal html pages (forms), not json
 import re
+from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
@@ -7,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .extensions import client_ip, db, limiter
+from .mailer import read_verify_token
 from .models import User
 
 blueprint = Blueprint("auth", __name__)
@@ -119,6 +121,23 @@ def login():
             return redirect(url_for("pages.index"))
 
     return render_template("auth.html", mode="login", username=username)
+
+
+# the link in the verification email (mailer.py). no login needed,
+# you might open it on your phone. the signed token proves it's yours
+@blueprint.get("/verify-email/<token>")
+def verify_email(token):
+    data = read_verify_token(token)
+    user = db.session.get(User, data["uid"]) if data else None
+
+    # bad/expired token, or you changed your email after this link was sent
+    if user is None or user.email != data["email"]:
+        return render_template("verify.html", ok=False), 400
+
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
+        db.session.commit()
+    return render_template("verify.html", ok=True, email=user.email)
 
 
 # POST only: a GET logout could be triggered by any link or <img> on another site

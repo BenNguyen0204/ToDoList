@@ -112,6 +112,29 @@
         &:hover { background: var(--primary-hover); }
     }
 
+    .accountHint {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    .accountActions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    /* looks like a link, it's a button bc it does something (resend) */
+    .accountLink {
+        padding: 0;
+        border: none;
+        background: none;
+        color: var(--primary);
+        font-size: 13px;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
     .accountStatus {
         font-size: 12px;
         color: var(--danger);
