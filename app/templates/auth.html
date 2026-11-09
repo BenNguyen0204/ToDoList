@@ -24,8 +24,15 @@
             <p class="authError">{{ message }}</p>
         {% endfor %}
 
+        {# only happens when a form was sent while logged in (see already_logged_in in auth.py) #}
+        {% if current_user.is_authenticated %}
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit">Log out</button>
+            </form>
+            <p class="authSwitch"><a href="{{ url_for('pages.index') }}">Back to my lists</a></p>
         {# config = app.config, flask makes it available in every template #}
-        {% if mode == "register" and not config.REGISTRATION_OPEN %}
+        {% elif mode == "register" and not config.REGISTRATION_OPEN %}
             <p>Sign-ups are closed.</p>
         {% else %}
             <form method="post">
@@ -44,7 +51,9 @@
             </form>
         {% endif %}
 
-        {% if mode == "login" %}
+        {% if current_user.is_authenticated %}
+            {# already handled above #}
+        {% elif mode == "login" %}
             {% if config.REGISTRATION_OPEN %}
                 <p class="authSwitch">No account? <a href="{{ url_for('auth.register') }}">Sign up</a></p>
             {% endif %}

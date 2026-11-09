@@ -39,12 +39,31 @@ def too_many_attempts(error):
     return render_template("auth.html", mode=mode, username=""), 429
 
 
+# don't let the browser keep a copy of these pages. otherwise the back button can show
+# an old login page while you're still logged in, and the form on it looks like it works
+@blueprint.after_request
+def no_store(response):
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+# already logged in and opened /login or /register
+def already_logged_in(mode):
+    # just opening the page -> go to your lists
+    if request.method == "GET":
+        return redirect(url_for("pages.index"))
+    # a form got sent anyway (e.g. from an old page). don't quietly ignore it,
+    # say who you're logged in as. auth.html shows a log out button instead of the form
+    flash(f"You're already logged in as {current_user.username}. Log out first to use another account.")
+    return render_template("auth.html", mode=mode, username="")
+
+
 @blueprint.route("/register", methods=["GET", "POST"])
 # max 10 sign-ups per hour from one ip, stops a script from making thousands of accounts
 @limiter.limit("10 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("pages.index"))
+        return already_logged_in("register")
 
     username = ""
     if not current_app.config["REGISTRATION_OPEN"]:
@@ -84,7 +103,7 @@ def register():
 @limiter.limit("30 per minute", methods=["POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("pages.index"))
+        return already_logged_in("login")
 
     username = ""
     if request.method == "POST":
