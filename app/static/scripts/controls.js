@@ -1,4 +1,4 @@
-// ---- filter & sort ----
+// FILTER & SORT
 // only decides which tasks show and in what order, never changes the data
 
 // dropdown used by both filter and sort. click to toggle, click outside to close

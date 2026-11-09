@@ -1,4 +1,4 @@
-// ---- task list rendering + user input ----
+// TASK LIST RENDERING + USER INPUT
 // doesn't change data itself, it calls addTask / updateTask / deleteTask / reorderTasks (taskActions.js)
 
 const tasksList = document.getElementById("tasksList");
@@ -8,7 +8,7 @@ const addButton = document.getElementById("addButton");
 const newTaskColorButton = document.getElementById("newTaskColorButton");
 const newTaskDateButton = document.getElementById("newTaskDateButton");
 
-// ---- render ----
+// RENDER
 
 function renderTask() {
     updateMainVisibility();
@@ -109,7 +109,7 @@ function updateCounters() {
     document.getElementById("completedCount").textContent = `Completed: ${completed}`;
 }
 
-// ---- drag & drop ----
+// DRAG & DROP
 // while dragging we only move the <li> around,
 // the actual reorder happens on dragend (in buildTaskItem)
 tasksList.addEventListener("dragover", (e) => {
@@ -126,7 +126,7 @@ tasksList.addEventListener("dragover", (e) => {
     tasksList.insertBefore(dragging, insertBefore || null);
 });
 
-// ---- new task row ----
+// NEW TASK ROW
 // color/date picked before hitting Add live here for now
 let pendingColor = null;
 let pendingDueDate = null;

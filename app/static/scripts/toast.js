@@ -1,4 +1,4 @@
-// ---- shared dialog ----
+// SHARED DIALOG
 // one dialog in index.html, used 2 ways:
 //   showToast(text, onYes)                             yes/no question
 //   showInputToast(label, value, onSave, placeholder)  one line of text (new list, edit task)

@@ -10,7 +10,7 @@ blueprint = Blueprint("api", __name__)
 
 COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 
-# ---------- validation ----------
+# VALIDATION
 # don't trust anything the client sends (JS could have a bug, or someone calls the API directly)
 # bad input -> abort(400, "reason") and flask stops right there
 
@@ -51,7 +51,7 @@ def validate_completed(value):
         abort(400, "completed must be true or false")
     return value
 
-# ---------- lookups ----------
+# LOOKUPS
 # flask pulls <int:list_id> out of the url and passes it in
 def get_list_or_404(list_id):
     return db.get_or_404(TodoList, list_id, description="List not found")
@@ -59,7 +59,7 @@ def get_list_or_404(list_id):
 def get_task_or_404(task_id):
     return db.get_or_404(Task, task_id, description="Task not found")
 
-# ---------- lists ----------
+# LISTS
 @blueprint.get("/lists")
 def get_lists():
     # selectinload gets all the tasks in one query:
@@ -98,7 +98,7 @@ def delete_list(list_id):
     db.session.commit()
     return "", 204                 # 204 = ok, nothing to return
 
-# ---------- tasks ----------
+# TASKS
 @blueprint.post("/lists/<int:list_id>/tasks")
 def create_task(list_id):
     todo_list = get_list_or_404(list_id)
@@ -183,7 +183,7 @@ def delete_task(task_id):
     db.session.commit()
     return "", 204
 
-# ---------- json errors ----------
+# JSON ERRORS
 # registered on the app, not the blueprint. a bad url like /api/abc doesn't match
 # any blueprint route so a blueprint handler would never see it
  
@@ -199,7 +199,7 @@ def register_error_handlers(app):
         app.register_error_handler(code, handle_error)
 
 
-# ---------- manual API test (PowerShell) ----------
+# MANUAL API TEST (POWERSHELL)
 # it's inside a """ string instead of # comments so i can copy paste it straight into powershell.
 # run "flask run" in one terminal, paste the blocks in order in another one
 # ($B, $L, $t1... stick around between pastes)
