@@ -31,6 +31,26 @@
             margin: 0;
         }
 
+        /* the small round (i) that opens the account panel */
+        .accountInfoButton {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text);
+            font: italic bold 11px Georgia, serif;
+            line-height: 1;
+            cursor: pointer;
+
+            &:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+        }
+
         .logoutButton {
             padding: 5px 10px;
             border: 2px solid var(--border);

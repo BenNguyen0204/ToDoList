@@ -14,6 +14,11 @@
     align-items: stretch;
     gap: 10px;
     z-index: 1000;
+    /* never taller than the screen. the account panel is long, without this its top
+       goes off the top of a short window and you can't scroll back up to it */
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    box-sizing: border-box;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
 
@@ -22,7 +27,7 @@
         pointer-events: all;
     }
 
-    p {
+    p, #toastMessage {
         margin: 0;
         font-size: 14px;
     }
@@ -53,6 +58,66 @@
 
             &:hover { background: var(--danger-hover); }
         }
+    }
+}
+
+/* ACCOUNT PANEL (account.js) */
+.accountPanel {
+    width: min(320px, 80vw);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .accountSection {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 0;
+    }
+
+    /* line between sections. "+" = every section except the first, so there's no line on top */
+    .accountSection + .accountSection {
+        border-top: 2px solid var(--border);
+        padding-top: 16px;
+    }
+
+    /* bigger instead of bold, the font has no bold */
+    h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: normal;
+    }
+
+    .accountRow {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .accountLabel {
+        opacity: 0.6;
+    }
+
+    .accountButton {
+        align-self: center;
+        padding: 6px 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        background: var(--primary);
+        color: white;
+
+        &:hover { background: var(--primary-hover); }
+    }
+
+    .accountStatus {
+        font-size: 12px;
+        color: var(--danger);
+
+        &.ok { color: var(--primary); }
+        &:empty { display: none; }
     }
 }
 

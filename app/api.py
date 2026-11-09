@@ -4,7 +4,9 @@ from flask import Blueprint, abort, jsonify, request
 from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
-from .extensions import db
+from werkzeug.security import check_password_hash, generate_password_hash
+from .auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
+from .extensions import client_ip, db, limiter
 from .models import Task, TodoList
 
 blueprint = Blueprint("api", __name__)
@@ -212,6 +214,55 @@ def delete_task(task_id):
     db.session.commit()
     return "", 204
 
+# ---------- account ----------
+
+@blueprint.get("/account")
+def get_account():
+    return jsonify(current_user.to_dict())
+
+@blueprint.patch("/account")
+def update_account():
+    data = get_json_body()
+
+    if "displayName" in data:
+        value = data["displayName"]
+        if value is not None and not isinstance(value, str):
+            abort(400, "displayName must be a string")
+        value = (value or "").strip()
+        if len(value) > 50:
+            abort(400, "displayName must be at most 50 characters")
+        # empty clears it, then the app shows the username again
+        current_user.display_name = value or None
+
+    db.session.commit()
+    return jsonify(current_user.to_dict())
+
+# limiter runs before require_login, so there might not be a user yet
+def password_change_key():
+    return f"pw:{current_user.id}" if current_user.is_authenticated else client_ip()
+
+@blueprint.post("/account/password")
+# needs the current password, so someone with your open tab can't just guess it forever
+@limiter.limit("10 per hour", key_func=password_change_key,
+               error_message="Too many tries. Wait an hour and try again.")
+def change_password():
+    data = get_json_body()
+    current = data.get("currentPassword")
+    new = data.get("newPassword")
+
+    if not isinstance(current, str) or not isinstance(new, str):
+        abort(400, "currentPassword and newPassword are required")
+    # 400, not 401: the JS treats 401 as "logged out" and goes to /login
+    if not check_password_hash(current_user.password_hash, current):
+        abort(400, "Current password is wrong")
+    # same rule as sign up (auth.py)
+    if not MIN_PASSWORD_LENGTH <= len(new) <= MAX_PASSWORD_LENGTH:
+        abort(400, f"New password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters")
+
+    current_user.password_hash = generate_password_hash(new)
+    db.session.commit()
+    return "", 204
+
 # ---------- json errors ----------
 # registered on the app, not the blueprint. a bad url like /api/abc doesn't match
 # any blueprint route so a blueprint handler would never see it
@@ -224,7 +275,8 @@ def register_error_handlers(app):
         # normal pages keep flask's default error page
         return error
  
-    for code in (400, 404, 405):
+    # 429 = rate limited (password change)
+    for code in (400, 404, 405, 429):
         app.register_error_handler(code, handle_error)
 
 

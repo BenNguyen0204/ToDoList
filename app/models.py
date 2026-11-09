@@ -12,6 +12,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # stored lowercase, unique so two people can't take the same name
     username = db.Column(db.String(32), nullable=False, unique=True)
+    # the name shown in the app. can be anything and doesn't have to be unique.
+    # empty -> we show the username instead
+    display_name = db.Column(db.String(50))
     # never the real password, only the hash from generate_password_hash
     password_hash = db.Column(db.String(255), nullable=False)
     # lambda so it runs on every insert, not once when the file loads
@@ -19,6 +22,20 @@ class User(UserMixin, db.Model):
 
     # one user -> many lists, deleting a user deletes their lists (and their tasks)
     lists = db.relationship("TodoList", back_populates="user", cascade="all, delete-orphan")
+
+    # what the sidebar shows
+    @property
+    def shown_name(self):
+        return self.display_name or self.username
+
+    # for the account panel. never put password_hash in here
+    def to_dict(self):
+        return {
+            "username": self.username,
+            "displayName": self.display_name,
+            # date only, "2026-11-09", the JS formats it like the due dates
+            "createdAt": self.created_at.date().isoformat(),
+        }
 
 class TodoList(db.Model):
     # named TodoList so it doesn't get mixed up with python's list
@@ -83,7 +100,7 @@ class Task(db.Model):
     due_date = db.Column(db.Date)
     # drag & drop order, the db doesn't keep row order
     position = db.Column(db.Integer, nullable=False, default=0)
-    
+
     # task.todo_list, other side of TodoList.tasks
     todo_list = db.relationship("TodoList", back_populates="tasks")
     

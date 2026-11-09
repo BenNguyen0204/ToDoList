@@ -23,7 +23,11 @@ async function apiRequest(method, path, body) {
     }
 
     if (!response.ok) {
-        throw new Error(`${method} ${path} failed: ${response.status}`);
+        // the API sends {"error": "..."}, keep that message so the UI can show it
+        const data = await response.json().catch(() => null);
+        const error = new Error(data?.error || `${method} ${path} failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
     }
 
     // 204 = no content

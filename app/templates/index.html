@@ -26,7 +26,10 @@
 
         <div class="sidebarFooter">
             {# flask-login makes current_user available in every template #}
-            <span class="username" title="{{ current_user.username }}">{{ current_user.username }}</span>
+            <span class="username" id="accountName" title="{{ current_user.shown_name }}">{{ current_user.shown_name }}</span>
+            {# opens the account panel (account.js) #}
+            <button type="button" id="accountInfoButton" class="accountInfoButton" title="Account details"
+                aria-label="Account details">i</button>
             {# a form so logout is a POST, see auth.py #}
             <form method="post" action="{{ url_for('auth.logout') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -99,7 +102,8 @@
     </div>
 
     <div class="toast" id="toast">
-        <p id="toastMessage"></p>
+        {# div, not p: the account panel puts forms in here #}
+        <div id="toastMessage"></div>
         <div class="toastButtons">
             <button class="toastYes" id="toastYes">Yes</button>
             <button class="toastNo" id="toastNo">No</button>
@@ -114,6 +118,7 @@
     <script src="{{ url_for('static', filename='scripts/taskActions.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/taskRender.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/account.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>
 </body>

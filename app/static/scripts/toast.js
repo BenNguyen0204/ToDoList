@@ -2,6 +2,7 @@
 // one dialog in index.html, used 2 ways:
 //   showToast(text, onYes)                             yes/no question
 //   showInputToast(label, value, onSave, placeholder)  one line of text (new list, edit task)
+//   showPanelToast(element)                            anything else, just a Close button (account panel)
 
 const toast = document.getElementById("toast");
 const toastMessage = document.getElementById("toastMessage");
@@ -11,6 +12,8 @@ const overlay = document.getElementById("overlay");
 
 function openToast(yesText, noText) {
     toastYes.textContent = yesText;
+    // showPanelToast hides it
+    toastYes.hidden = false;
     toastNo.textContent = noText;
     toast.classList.add("show");
     overlay.classList.add("show");
@@ -21,6 +24,14 @@ function closeToast() {
     toast.classList.remove("show");
     overlay.classList.remove("show");
     toastMessage.innerHTML = "";
+}
+
+// the panel has its own buttons, so only keep Close
+function showPanelToast(element) {
+    toastMessage.textContent = "";
+    toastMessage.appendChild(element);
+    openToast("", "Close");
+    toastYes.hidden = true;
 }
 
 function showToast(text, onYes) {
