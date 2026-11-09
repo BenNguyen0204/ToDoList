@@ -1,0 +1,78 @@
+/* login / sign up page. body is display:flex in base.css, margin:auto centers the card */
+.authCard {
+    margin: auto;
+    width: 100%;
+    max-width: 340px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    box-sizing: border-box;
+    box-shadow: var(--shadow);
+
+    h1 {
+        font-size: 20px;
+        margin: 0 0 18px;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+    }
+
+    input {
+        padding: 8px 10px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 16px; /* 16px stops iPhone from zooming in */
+        outline: none;
+
+        &:focus {
+            border-color: var(--primary);
+        }
+    }
+
+    button {
+        margin-top: 4px;
+        padding: 9px;
+        border: none;
+        border-radius: 8px;
+        background: var(--primary);
+        color: white;
+        font-size: 15px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--primary-hover);
+        }
+    }
+
+    a {
+        color: var(--primary);
+    }
+}
+
+.authError {
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 13px;
+}
+
+.authSwitch {
+    margin: 18px 0 0;
+    font-size: 13px;
+    text-align: center;
+}

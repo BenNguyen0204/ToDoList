@@ -21,6 +21,15 @@
             <button id="newListButton">+</button>
         </div>
         <ul id="listTabs"></ul>
+
+        <div class="sidebarFooter">
+            {# flask-login makes current_user available in every template #}
+            <span class="username" title="{{ current_user.username }}">{{ current_user.username }}</span>
+            {# a form so logout is a POST, see auth.py #}
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <button type="submit" class="logoutButton">Log out</button>
+            </form>
+        </div>
     </div>
 
     <div class="main">

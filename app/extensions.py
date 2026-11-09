@@ -1,6 +1,7 @@
 # extensions are created here and hooked up later in create_app() with init_app().
 # separate file so models.py can import db without a circular import
 
+from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
@@ -20,3 +21,6 @@ db = SQLAlchemy(metadata=MetaData(naming_convention=convention))
 # batch mode bc sqlite can't really do ALTER TABLE.
 # it makes a new table, copies the data over, drops the old one and renames
 migrate = Migrate(render_as_batch=True)
+
+# keeps track of who's logged in (stores the user id in the session cookie)
+login_manager = LoginManager()

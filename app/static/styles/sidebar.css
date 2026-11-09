@@ -6,6 +6,45 @@
     padding: 20px 12px;
     box-sizing: border-box;
     flex-shrink: 0;
+    /* column so the footer can sit at the bottom */
+    display: flex;
+    flex-direction: column;
+
+    .sidebarFooter {
+        margin-top: auto; /* pushes it to the bottom */
+        padding-top: 12px;
+        border-top: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+
+        .username {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        form {
+            margin: 0;
+        }
+
+        .logoutButton {
+            padding: 5px 10px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text);
+            font-size: 12px;
+            cursor: pointer;
+
+            &:hover {
+                border-color: var(--danger);
+                color: var(--danger);
+            }
+        }
+    }
 
     .sidebarHeader {
         display: flex;

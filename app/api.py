@@ -1,6 +1,7 @@
 import re
 from datetime import date
 from flask import Blueprint, abort, jsonify, request
+from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from .extensions import db
@@ -8,9 +9,16 @@ from .models import Task, TodoList
 
 blueprint = Blueprint("api", __name__)
 
+# runs before EVERY route in this blueprint, so no route can forget to check login.
+# not logged in -> login_required calls unauthorized_handler -> 401 json
+@blueprint.before_request
+@login_required
+def require_login():
+    pass
+
 COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 
-# VALIDATION
+# ---------- validation ----------
 # don't trust anything the client sends (JS could have a bug, or someone calls the API directly)
 # bad input -> abort(400, "reason") and flask stops right there
 
@@ -51,21 +59,36 @@ def validate_completed(value):
         abort(400, "completed must be true or false")
     return value
 
-# LOOKUPS
-# flask pulls <int:list_id> out of the url and passes it in
+# ---------- lookups ----------
+# flask pulls <int:list_id> out of the url and passes it in.
+# ALWAYS filter by the logged-in user, otherwise anyone could edit anyone's data
+# just by changing the id in the url (that bug is called IDOR).
+# someone else's list -> 404, same as "doesn't exist", so we don't even confirm it exists
 def get_list_or_404(list_id):
-    return db.get_or_404(TodoList, list_id, description="List not found")
+    query = db.select(TodoList).filter_by(id=list_id, user_id=current_user.id)
+    return db.first_or_404(query, description="List not found")
 
 def get_task_or_404(task_id):
-    return db.get_or_404(Task, task_id, description="Task not found")
+    # tasks don't have a user_id, so join to their list and check the list's owner
+    query = (
+        db.select(Task)
+        .join(TodoList)
+        .where(Task.id == task_id, TodoList.user_id == current_user.id)
+    )
+    return db.first_or_404(query, description="Task not found")
 
-# LISTS
+# ---------- lists ----------
 @blueprint.get("/lists")
 def get_lists():
     # selectinload gets all the tasks in one query:
     # SELECT * FROM tasks WHERE list_id IN (1, 2, ..., 100) ORDER BY position;
     # instead of one query per list (WHERE list_id = 1, then 2, ...)
-    query = db.select(TodoList).options(selectinload(TodoList.tasks)).order_by(TodoList.id)
+    query = (
+        db.select(TodoList)
+        .where(TodoList.user_id == current_user.id)  # only my lists
+        .options(selectinload(TodoList.tasks))
+        .order_by(TodoList.id)
+    )
     lists = db.session.scalars(query).all()
     return jsonify([todo_list.to_dict() for todo_list in lists])
 
@@ -75,7 +98,7 @@ def create_list():
     name = validate_text(data.get("name"), "name", 100)
     # returns {"id": 5, "name": "Chores", "tasks": []}
  
-    todo_list = TodoList(name=name)
+    todo_list = TodoList(name=name, user_id=current_user.id)  # new list belongs to me
     db.session.add(todo_list)
     db.session.commit()          # id gets assigned here
     return jsonify(todo_list.to_dict()), 201   # 201 = created
@@ -98,7 +121,7 @@ def delete_list(list_id):
     db.session.commit()
     return "", 204                 # 204 = ok, nothing to return
 
-# TASKS
+# ---------- tasks ----------
 @blueprint.post("/lists/<int:list_id>/tasks")
 def create_task(list_id):
     todo_list = get_list_or_404(list_id)
@@ -183,7 +206,7 @@ def delete_task(task_id):
     db.session.commit()
     return "", 204
 
-# JSON ERRORS
+# ---------- json errors ----------
 # registered on the app, not the blueprint. a bad url like /api/abc doesn't match
 # any blueprint route so a blueprint handler would never see it
  
@@ -199,7 +222,7 @@ def register_error_handlers(app):
         app.register_error_handler(code, handle_error)
 
 
-# MANUAL API TEST (POWERSHELL)
+# ---------- manual API test (PowerShell) ----------
 # it's inside a """ string instead of # comments so i can copy paste it straight into powershell.
 # run "flask run" in one terminal, paste the blocks in order in another one
 # ($B, $L, $t1... stick around between pastes)

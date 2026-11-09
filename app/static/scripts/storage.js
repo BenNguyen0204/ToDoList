@@ -9,6 +9,12 @@ async function apiRequest(method, path, body) {
 
     const response = await fetch(path, options);
 
+    // 401 = not logged in anymore (logged out in another tab, cookie expired) -> back to login
+    if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Not logged in");
+    }
+
     if (!response.ok) {
         throw new Error(`${method} ${path} failed: ${response.status}`);
     }

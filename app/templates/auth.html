@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/variables.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/auth.css') }}" />
+    <title>{{ "Log in" if mode == "login" else "Sign up" }} - To-do List</title>
+</head>
+
+<body>
+    <script>
+        // same dark mode setting as the main page
+        if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
+    </script>
+
+    <main class="authCard">
+        <h1>{{ "Log in" if mode == "login" else "Create an account" }}</h1>
+
+        {# flash() messages from auth.py #}
+        {% for message in get_flashed_messages() %}
+            <p class="authError">{{ message }}</p>
+        {% endfor %}
+
+        <form method="post">
+            <label>
+                Username
+                <input type="text" name="username" value="{{ username }}" autocomplete="username" required autofocus />
+            </label>
+            <label>
+                Password
+                <input type="password" name="password"
+                    autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}" required />
+            </label>
+            <button type="submit">{{ "Log in" if mode == "login" else "Sign up" }}</button>
+        </form>
+
+        {% if mode == "login" %}
+            <p class="authSwitch">No account? <a href="{{ url_for('auth.register') }}">Sign up</a></p>
+        {% else %}
+            <p class="authSwitch">Already have one? <a href="{{ url_for('auth.login') }}">Log in</a></p>
+        {% endif %}
+    </main>
+</body>
+
+</html>

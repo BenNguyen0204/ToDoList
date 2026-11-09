@@ -1,5 +1,24 @@
 # each class = a table, each db.Column = a column
+from datetime import datetime, timezone
+
+from flask_login import UserMixin
+
 from .extensions import db
+
+class User(UserMixin, db.Model):
+    # UserMixin gives flask-login what it needs (is_authenticated, get_id, ...)
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    # stored lowercase, unique so two people can't take the same name
+    username = db.Column(db.String(32), nullable=False, unique=True)
+    # never the real password, only the hash from generate_password_hash
+    password_hash = db.Column(db.String(255), nullable=False)
+    # lambda so it runs on every insert, not once when the file loads
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    # one user -> many lists, deleting a user deletes their lists (and their tasks)
+    lists = db.relationship("TodoList", back_populates="user", cascade="all, delete-orphan")
 
 class TodoList(db.Model):
     # named TodoList so it doesn't get mixed up with python's list
@@ -9,7 +28,16 @@ class TodoList(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # max 100 chars, required
     name = db.Column(db.String(100), nullable=False)
-    
+
+    # who owns this list. every lookup in api.py filters on this
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user = db.relationship("User", back_populates="lists")
+
     # one list -> many tasks, deleting a list deletes its tasks
     tasks = db.relationship(
         "Task",  # string bc Task is defined below
