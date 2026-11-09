@@ -80,8 +80,8 @@ function renderSidebar() {
             input.focus();
             input.select();
 
-            // finished: Escape gọi renderSidebar() gỡ ô nhập, việc đó kích hoạt blur.
-            // Không có cờ này thì blur sẽ lưu luôn tên mới dù đã bấm Escape.
+            // Escape calls renderSidebar() which removes the input and fires blur,
+            // without this flag blur would still save the new name
             let finished = false;
 
             const save = () => {
@@ -90,14 +90,14 @@ function renderSidebar() {
                 const newName = input.value.trim();
 
                 if (!newName || newName === list.name) {
-                    renderSidebar();               // không đổi gì thì chỉ vẽ lại
+                    renderSidebar();
                     return;
                 }
 
                 list.name = newName;
-                renderSidebar();                   // vẽ trước
+                renderSidebar();
                 renderTask();
-                // rồi lưu. Không cần await: không có gì phải làm tiếp sau khi lưu xong
+                // no await, nothing to do after it saves
                 apiSave("PATCH", `/api/lists/${list.id}`, { name: newName });
             };
 
@@ -132,7 +132,7 @@ function renderSidebar() {
             listTitle.textContent = getCurrentList()?.name || "";
             renderSidebar();
             renderTask();
-            // Xoá list trên server, database tự xoá luôn task của nó (cascade)
+            // server deletes its tasks too (cascade)
             apiSave("DELETE", `/api/lists/${list.id}`);
         });
 
@@ -147,7 +147,7 @@ function renderSidebar() {
 
 newListButton.addEventListener("click", () => {
     showInputToast("Name your new list:", "", async (name) => {
-        // Đợi server tạo list và cấp id rồi mới thêm vào giao diện
+        // wait for the id from the server before adding it
         const newList = await apiSave("POST", "/api/lists", { name });
         if (!newList) return;
 

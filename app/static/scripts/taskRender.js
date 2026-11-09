@@ -1,6 +1,5 @@
-// ---- Vẽ danh sách task và xử lý thao tác của người dùng ----
-// File này KHÔNG tự sửa dữ liệu: khi người dùng bấm gì,
-// nó gọi addTask / updateTask / deleteTask / reorderTasks (taskActions.js).
+// ---- task list rendering + user input ----
+// doesn't change data itself, it calls addTask / updateTask / deleteTask / reorderTasks (taskActions.js)
 
 const tasksList = document.getElementById("tasksList");
 const emptyState = document.getElementById("emptyState");
@@ -9,7 +8,7 @@ const addButton = document.getElementById("addButton");
 const newTaskColorButton = document.getElementById("newTaskColorButton");
 const newTaskDateButton = document.getElementById("newTaskDateButton");
 
-// ---- Vẽ ----
+// ---- render ----
 
 function renderTask() {
     updateMainVisibility();
@@ -32,7 +31,7 @@ function renderTask() {
     updateCounters();
 }
 
-// Tạo một dòng <li> cho một task: checkbox, chấm màu, chữ, nút ngày, sửa, xoá.
+// one <li> per task: checkbox, color dot, text, date, edit, delete
 function buildTaskItem(task) {
     const li = document.createElement("li");
     li.dataset.id = String(task.id);
@@ -110,15 +109,15 @@ function updateCounters() {
     document.getElementById("completedCount").textContent = `Completed: ${completed}`;
 }
 
-// ---- Kéo thả ----
-// Lúc đang kéo chỉ di chuyển <li> trên màn hình.
-// Khi thả (dragend ở buildTaskItem) mới đọc thứ tự mới và gọi reorderTasks.
+// ---- drag & drop ----
+// while dragging we only move the <li> around,
+// the actual reorder happens on dragend (in buildTaskItem)
 tasksList.addEventListener("dragover", (e) => {
     e.preventDefault();
     const dragging = tasksList.querySelector(".dragging");
     if (!dragging) return;
 
-    // Chèn vào trước task đầu tiên mà chuột nằm ở nửa trên của nó
+    // drop it before the first task where the mouse is in its top half
     const others = [...tasksList.querySelectorAll("li:not(.dragging)")];
     const insertBefore = others.find(el => {
         const rect = el.getBoundingClientRect();
@@ -127,8 +126,8 @@ tasksList.addEventListener("dragover", (e) => {
     tasksList.insertBefore(dragging, insertBefore || null);
 });
 
-// ---- Hàng nhập task mới ----
-// Màu và ngày chọn trước khi bấm Add được giữ tạm ở đây.
+// ---- new task row ----
+// color/date picked before hitting Add live here for now
 let pendingColor = null;
 let pendingDueDate = null;
 

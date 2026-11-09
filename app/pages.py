@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 
-# Blueprint là một nhóm route đi chung với nhau.
+# a blueprint is just a group of routes
 blueprint = Blueprint('pages', __name__)
 
 @blueprint.route('/')

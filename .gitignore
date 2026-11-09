@@ -1,30 +1,30 @@
-# Môi trường ảo
+# virtual env
 .venv/
 venv/
 
-# File Python tự sinh
+# python cache
 __pycache__/
 *.py[cod]
 
-# Mật khẩu, khóa bí mật
+# secrets
 .env
 .env.*
 !.env.example
 
-# Database trên máy
+# local db
 instance/
 *.db
 *.sqlite3
 
-# Test
+# tests
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Log
+# logs
 *.log
 
-# Editor và hệ điều hành
+# editor / OS junk
 .vscode/
 .idea/
 Thumbs.db

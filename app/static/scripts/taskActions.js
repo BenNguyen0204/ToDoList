@@ -1,7 +1,7 @@
-// ---- Nơi DUY NHẤT sửa dữ liệu task ----
-// Mọi thao tác (thêm, sửa, xoá, kéo thả) đều gọi một trong 4 hàm này.
-// Mỗi hàm: sửa dữ liệu -> lưu -> vẽ lại.
-// Giai đoạn 5 chỉ cần đổi phần "lưu" thành một request lên API.
+// ---- all task changes go through here ----
+// add / edit / delete / drag each call one of these 4.
+// update, delete and reorder change the UI first and save after,
+// addTask waits for the server since it needs the id
 
 function findTask(id) {
     return getTasks().find(t => t.id === id);
@@ -17,7 +17,7 @@ async function addTask(text, color, dueDate) {
     renderTask();
 }
 
-// changes chỉ chứa các trường muốn đổi, ví dụ { completed: true } hoặc { color: null }.
+// changes = just the fields that changed, e.g. { completed: true } or { color: null }
 async function updateTask(id, changes) {
     const task = findTask(id);
     if (!task) return;
@@ -33,11 +33,11 @@ async function deleteTask(id) {
     await apiSave("DELETE", `/api/tasks/${id}`);
 }
 
-// visibleIds: id của các task ĐANG HIỆN, theo thứ tự mới trên màn hình.
-// Task bị ẩn (do đang lọc) giữ nguyên vị trí; các task đang hiện đổi chỗ
-// trong đúng những vị trí chúng đang chiếm.
-//   Ví dụ: [A✓, B, C✓, D], lọc Active, kéo D lên trên B
-//   -> vị trí của B, D là [1, 3] -> đặt D vào 1, B vào 3 -> [A✓, D, C✓, B]
+// visibleIds = ids of the tasks on screen, in the new order.
+// hidden tasks (filtered out) stay put, the visible ones only swap
+// around inside the slots they already had.
+//   e.g. [A✓, B, C✓, D], filter Active, drag D above B
+//   -> B, D are at [1, 3] -> D goes to 1, B to 3 -> [A✓, D, C✓, B]
 async function reorderTasks(visibleIds) {
     const list = getCurrentList();
     const tasks = list.tasks;
@@ -50,6 +50,6 @@ async function reorderTasks(visibleIds) {
     slots.forEach((slot, k) => { tasks[slot] = visibleTasks[k]; });
  
     renderTask();
-    // Gửi id của TOÀN BỘ task theo thứ tự mới, không chỉ task đang hiện
+    // send every task id, not just the visible ones
     await apiSave("PUT", `/api/lists/${list.id}/order`, { taskIds: tasks.map(t => t.id) });
 }

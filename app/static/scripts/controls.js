@@ -1,9 +1,7 @@
-// ---- Bộ lọc và sắp xếp ----
-// Chỉ quyết định task nào được HIỆN và hiện theo thứ tự nào.
-// Không bao giờ sửa dữ liệu.
+// ---- filter & sort ----
+// only decides which tasks show and in what order, never changes the data
 
-// Menu thả xuống dùng chung cho Filter và Sort:
-// bấm nút để mở/đóng, bấm ra ngoài để đóng, chọn một mục thì gọi onChange.
+// dropdown used by both filter and sort. click to toggle, click outside to close
 function setupDropdown(toggleId, menuId, onChange) {
     const toggle = document.getElementById(toggleId);
     const menu = document.getElementById(menuId);
@@ -36,7 +34,7 @@ function filterTasks(tasks) {
     return tasks;
 }
 
-// "manual" | "earliest" | "latest" | "color". Nhớ qua các lần tải trang.
+// "manual" | "earliest" | "latest" | "color", saved in localStorage
 let currentSort = localStorage.getItem("sortOrder") || "manual";
 const savedSortRadio = document.querySelector(`input[name="sort"][value="${currentSort}"]`);
 if (savedSortRadio) savedSortRadio.checked = true;
@@ -47,11 +45,11 @@ setupDropdown("sortToggle", "sortMenu", (value) => {
     renderTask();
 });
 
-// Trả về mảng MỚI đã sắp xếp, không đụng vào mảng gốc.
+// returns a sorted copy, doesn't mess with the original
 function sortTasks(tasks) {
     if (currentSort === "earliest" || currentSort === "latest") {
         const withDate = tasks.filter(t => t.dueDate);
-        const withoutDate = tasks.filter(t => !t.dueDate);   // không có hạn: luôn xếp cuối
+        const withoutDate = tasks.filter(t => !t.dueDate);   // no due date -> always last
         withDate.sort((a, b) => currentSort === "earliest"
             ? a.dueDate.localeCompare(b.dueDate)
             : b.dueDate.localeCompare(a.dueDate));
@@ -59,9 +57,9 @@ function sortTasks(tasks) {
     }
 
     if (currentSort === "color") {
-        const colorOrder = TASK_COLORS.map(c => c.value);   // theo thứ tự trong bảng màu
+        const colorOrder = TASK_COLORS.map(c => c.value);   // same order as the picker
         const withColor = tasks.filter(t => t.color);
-        const withoutColor = tasks.filter(t => !t.color);   // không có màu: luôn xếp cuối
+        const withoutColor = tasks.filter(t => !t.color);   // no color -> always last
         withColor.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
         return [...withColor, ...withoutColor];
     }

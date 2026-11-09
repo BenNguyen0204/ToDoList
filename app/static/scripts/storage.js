@@ -13,14 +13,14 @@ async function apiRequest(method, path, body) {
         throw new Error(`${method} ${path} failed: ${response.status}`);
     }
 
-    // 204 la no content
+    // 204 = no content
     if (response.status === 204) return null;
 
     return response.json();
 }
-// pendingSaves cho biết hiện có bao nhiêu request lưu đang gửi đi mà chưa xong.
-// Bắt đầu lưu thì pendingSaves++
-// Lưu xong (thành công hay lỗi đều vậy, nhờ finally) thì pendingSaves--
+
+// pendingSaves = saves that haven't finished yet, main.js won't refresh while it's > 0.
+// finally makes sure it goes back down even if the request fails
 
 async function apiSave(method, path, body) {
     pendingSaves++;
@@ -37,14 +37,13 @@ async function apiSave(method, path, body) {
 
 async function loadList() {
     lists = await apiRequest("GET", "/api/lists");
-    // lists.some(...) duyệt hết mọi list để xem list đang chọn còn không.
-    // lists[0] chỉ chạy khi bước 1 không tìm thấy.
+    // selected list got deleted somewhere else -> fall back to the first one
     if (!lists.some(l => l.id === currentListId)) {
         currentListId = lists[0]?.id?? null;
     }
 }
 
-// Frontend trong main.js
+// lists / currentListId live in main.js
 function getCurrentList() {
     return lists.find(l => l.id === currentListId) || null;
 }

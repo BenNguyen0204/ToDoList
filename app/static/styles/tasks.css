@@ -101,9 +101,7 @@
     }
 }
 
-/* Shared by task rows AND the "new task" row, so a color/due-date button
-   looks and behaves the same whether it's on an existing task or on the
-   input row used to create one. */
+/* used by task rows and the new task row so the color/date buttons look the same */
 .colorButton {
     flex-shrink: 0;
     width: 22px;

@@ -1,24 +1,24 @@
-# Mỗi class trong file này là một bảng trong database, mỗi db.Column là một cột.
+# each class = a table, each db.Column = a column
 from .extensions import db
 
 class TodoList(db.Model):
-    # Tên bảng trong database. Class vẫn tên ToDoList để không nhầm với list của Python.
+    # named TodoList so it doesn't get mixed up with python's list
     __tablename__ = 'lists'
 
-    # Khóa chính: do database tự cấp, không dùng Date.now() như JS.
+    # db gives us the id now, no more Date.now()
     id = db.Column(db.Integer, primary_key=True)
-    # Tên list, tối đa 100 ký tự. nullable=False nghĩa là bắt buộc phải có.
+    # max 100 chars, required
     name = db.Column(db.String(100), nullable=False)
     
-    # Một list có nhiều task. Xoá list thì xoá luôn task của nó.
+    # one list -> many tasks, deleting a list deletes its tasks
     tasks = db.relationship(
-        "Task",  # Model ở phía bên kia của quan hệ. Viết dạng chuỗi vì class Task khai báo sau.
-        back_populates="todo_list",  # Nối với thuộc tính todo_list bên Task, hai bên luôn đồng bộ.
-        cascade="all, delete-orphan",  # SQLAlchemy tự xóa task khi xóa list, hoặc khi task bị gỡ khỏi list.
-        order_by="Task.position",  # Lấy task theo đúng thứ tự kéo thả.
+        "Task",  # string bc Task is defined below
+        back_populates="todo_list",  # keeps task.todo_list in sync
+        cascade="all, delete-orphan",  # also deletes a task if it's removed from the list
+        order_by="Task.position",  # drag & drop order
     )
     
-    # Đổi object thành dict để Flask trả về dạng JSON cho JS.
+    # so flask can send it as json
     def to_dict(self):
         return {
             "id": self.id,
@@ -27,42 +27,39 @@ class TodoList(db.Model):
         }
         
 class Task(db.Model):
-    # Tên bảng trong database.
     __tablename__ = 'tasks'
     
-    # Khóa chính: do database tự cấp.
     id = db.Column(db.Integer, primary_key=True)
 
-    # Khóa ngoại: cho biết task thuộc list nào.
-    # Quan hệ một-nhiều nên khóa ngoại nằm ở phía "nhiều", tức là bảng tasks.
+    # which list the task is in (FK goes on the "many" side)
     list_id = db.Column(
         db.Integer,
-        db.ForeignKey("lists.id", ondelete="CASCADE"),  # Database tự xóa task khi list bị xóa. SQLite mặc định không thực thi.
+        db.ForeignKey("lists.id", ondelete="CASCADE"),  # db level cascade, sqlite ignores it unless foreign keys are turned on
         nullable=False,
-        index=True  # Tìm task theo list nhanh hơn, vì PostgreSQL không tự tạo index cho khóa ngoại.
+        index=True  # postgres doesn't index FKs by itself
     )
 
-    # Nội dung task, tối đa 500 ký tự, bắt buộc.
+    # max 500 chars, required
     text = db.Column(db.String(500), nullable=False)
-    # Trạng thái hoàn thành. Task mới mặc định là chưa xong.
+    # new tasks start not done
     completed = db.Column(db.Boolean, nullable=False, default=False)
-    # Mã màu dạng #ff0000, đúng 7 ký tự. Không ghi nullable=False nên được để trống.
+    # hex like #ff0000, optional
     color = db.Column(db.String(7))
-    # Hạn hoàn thành, không bắt buộc. Kiểu Date chỉ lưu ngày, không lưu giờ.
+    # date only (no time), optional
     due_date = db.Column(db.Date)
-    # Thứ tự kéo thả, vì database không đảm bảo thứ tự các dòng.
+    # drag & drop order, the db doesn't keep row order
     position = db.Column(db.Integer, nullable=False, default=0)
     
-    # Từ một task đi ngược về list của nó (task.todo_list). Nối với thuộc tính tasks bên ToDoList.
+    # task.todo_list, other side of TodoList.tasks
     todo_list = db.relationship("TodoList", back_populates="tasks")
     
-    # Đổi object thành dict để trả về JSON. Dùng tên dueDate vì JS đang dùng tên đó.
+    # dueDate in camelCase bc that's what the JS uses
     def to_dict(self):
         return {
             "id": self.id,
             "text": self.text,
             "completed": self.completed,
             "color": self.color,
-            # JSON không có kiểu ngày, nên đổi sang chuỗi "2026-11-07". Không có hạn thì trả về None.
+            # json has no date type -> "2026-11-07" or None
             "dueDate": self.due_date.isoformat() if self.due_date else None,
         }

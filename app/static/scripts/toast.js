@@ -1,7 +1,7 @@
-// ---- Hộp thoại dùng chung ----
-// Một hộp thoại duy nhất trong index.html, dùng cho 2 việc:
-//   showToast(text, onYes)                          hỏi Yes/No
-//   showInputToast(label, value, onSave, placeholder) nhập một dòng chữ (tạo list, sửa task)
+// ---- shared dialog ----
+// one dialog in index.html, used 2 ways:
+//   showToast(text, onYes)                             yes/no question
+//   showInputToast(label, value, onSave, placeholder)  one line of text (new list, edit task)
 
 const toast = document.getElementById("toast");
 const toastMessage = document.getElementById("toastMessage");
