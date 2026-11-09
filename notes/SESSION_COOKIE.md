@@ -1,166 +1,171 @@
-# Ghi chú: Session cookie và SECRET_KEY
+# Notes: Session cookies and SECRET_KEY
 
-## Vấn đề
+## The problem
 
-HTTP không có trí nhớ. Mỗi request tới Flask đều như của một người lạ, server không biết request này với request lúc nãy có phải của cùng một người không.
+HTTP has no memory. Every request reaches Flask like it's from a stranger, the server can't tell whether this request and the last one came from the same person.
 
-Vậy sau khi đăng nhập, làm sao server biết các request tiếp theo là của mình? Câu trả lời là **cookie**.
-
----
-
-## Cookie là gì?
-
-Cookie là một đoạn dữ liệu nhỏ mà server bảo trình duyệt cất giữ. Từ đó, **mỗi request** gửi tới trang đó, trình duyệt đều tự gửi kèm cookie lên.
-
-Có thể hình dung như vé gửi xe: lần đầu bãi đưa vé, lần sau mình chỉ cần đưa vé ra là bãi biết xe nào của mình.
+So after logging in, how does the server know the next requests are yours? The answer is a **cookie**.
 
 ---
 
-## Session cookie trong Flask
+## What is a cookie?
 
-Flask có sẵn một dict tên `session`. Ghi gì vào đó thì Flask tự nhét vào một cookie tên `session` rồi gửi về trình duyệt.
+A cookie is a small piece of data the server asks the browser to keep. From then on, the browser automatically sends it with **every request** to that site.
+
+Like a parking ticket: the lot gives you a ticket the first time, and after that you just show the ticket and they know which car is yours.
+
+---
+
+## The session cookie in Flask
+
+Flask has a built-in dict called `session`. Whatever you put in it, Flask packs into a cookie called `session` and sends it to the browser.
 
 ```
-1. Đăng nhập     -> server ghi session["_user_id"] = "5"
-2. Server trả về -> Set-Cookie: session=eyJfdXNlcl9pZCI6IjUifQ.Zx3k...
-3. Request sau   -> trình duyệt tự gửi Cookie: session=...
-4. Flask đọc     -> session["_user_id"] == "5" -> biết là user 5
+1. Log in        -> server sets session["_user_id"] = "5"
+2. Server sends  -> Set-Cookie: session=eyJfdXNlcl9pZCI6IjUifQ.Zx3k...
+3. Next request  -> browser sends Cookie: session=...
+4. Flask reads   -> session["_user_id"] == "5" -> it's user 5
 ```
 
-Flask không lưu session ở server. **Toàn bộ dữ liệu nằm trong cookie ở trình duyệt.**
+Flask doesn't store sessions on the server. **All the data is in the cookie, in the browser.**
 
 ---
 
-## Flask-Login làm gì?
+## What Flask-Login does
 
-Flask-Login lo phần đăng nhập dựa trên `session`:
+Flask-Login handles logging in on top of `session`:
 
-| Hàm / thứ | Nó làm gì |
+| Function / thing | What it does |
 |---|---|
-| `login_user(user)` | Ghi id của user vào `session` |
-| `@login_manager.user_loader` | Mỗi request, lấy id từ cookie rồi tìm `User` trong database |
-| `current_user` | User đang đăng nhập (hoặc user ẩn danh nếu chưa đăng nhập) |
-| `@login_required` | Chặn route nếu chưa đăng nhập, gọi `unauthorized_handler` |
-| `logout_user()` | Xoá id khỏi `session` |
+| `login_user(user)` | Puts the user's id in `session` |
+| `@login_manager.user_loader` | On every request, takes the id from the cookie and loads the `User` from the database |
+| `current_user` | The logged-in user (or an anonymous user if not logged in) |
+| `@login_required` | Blocks a route if not logged in, calls `unauthorized_handler` |
+| `logout_user()` | Removes the id from `session` |
 
-Trong project:
+In this project:
 
-- `app/auth.py`: `login_user(user, remember=True)` khi đăng ký / đăng nhập thành công.
-- `app/__init__.py`: `load_user` đổi id thành `User`. `unauthorized` trả 401 cho `/api/...`, còn trang thường thì chuyển về `/login`.
-- `app/api.py`: mọi query đều lọc theo `current_user.id`, nên không ai sửa được list của người khác.
+- `app/auth.py`: `login_user(user, remember=True)` after a successful sign up / log in.
+- `app/__init__.py`: `load_user` turns the id into a `User`. `unauthorized` returns 401 for `/api/...` and redirects normal pages to `/login`.
+- `app/api.py`: every query filters by `current_user.id`, so nobody can change someone else's lists.
 
-**Chỉ lưu id trong cookie, không lưu cả object User.** Mỗi request lại đọc User từ database, nên nếu user bị xoá thì cookie cũ cũng hết tác dụng.
+**Only the id goes in the cookie, not the whole User.** The User is loaded from the database on every request, so if the user gets deleted, their old cookie stops working.
 
 ### `remember=True`
 
-Cookie `session` mặc định sẽ mất khi đóng trình duyệt. `remember=True` tạo thêm một cookie `remember_token` sống lâu hơn (mặc định 365 ngày), nên đóng trình duyệt mở lại vẫn còn đăng nhập.
+The `session` cookie disappears when the browser closes. `remember=True` adds a second, longer-lived cookie, `remember_token` (365 days by default), so you're still logged in after reopening the browser.
 
 ---
 
-## SECRET_KEY để làm gì?
+## What is SECRET_KEY for?
 
-Cookie `session` **được ký, không được mã hoá**.
+The `session` cookie is **signed, not encrypted**.
 
-- **Không mã hoá:** ai cũng giải ra đọc được, thấy rõ `{"_user_id": "5"}`.
-- **Có ký:** Flask lấy dữ liệu + `SECRET_KEY` tính ra một chữ ký rồi gắn vào cuối cookie.
+- **Not encrypted:** anyone can decode it and read `{"_user_id": "5"}`.
+- **Signed:** Flask takes the data + `SECRET_KEY`, computes a signature and attaches it to the cookie.
 
-Khi cookie gửi lên, Flask tính lại chữ ký và so:
+When the cookie comes back, Flask recomputes the signature and compares:
 
 ```
-Cookie gốc:   {"_user_id": "5"} + chữ ký đúng        -> OK
-Bị sửa:       {"_user_id": "1"} + chữ ký cũ          -> không khớp, bỏ cookie
+Original:   {"_user_id": "5"} + correct signature   -> OK
+Edited:     {"_user_id": "1"} + old signature        -> doesn't match, cookie ignored
 ```
 
-Muốn tạo chữ ký đúng cho dữ liệu mới thì phải biết `SECRET_KEY`. Nên:
+To make a correct signature for new data you need `SECRET_KEY`. So:
 
-> **SECRET_KEY chống SỬA cookie, không chống ĐỌC cookie.**
+> **SECRET_KEY stops people from CHANGING the cookie, not from READING it.**
 
-Giống con dấu giáp lai: ai cũng đọc được giấy, nhưng sửa chữ thì con dấu không khớp nữa.
+Like a wax seal on a letter: anyone can read the letter, but change a word and the seal no longer matches.
 
-### Nếu lộ SECRET_KEY thì sao?
+The same idea is used for the email verification links (see `EMAIL_REMINDERS.md`).
 
-Người khác tự tạo được cookie `{"_user_id": "1"}` với chữ ký hợp lệ, tức là **đăng nhập vào tài khoản bất kỳ mà không cần mật khẩu**.
+### What if SECRET_KEY leaks?
 
-Cách xử lý: đổi `SECRET_KEY`. Mọi cookie cũ không còn khớp chữ ký, nên tất cả mọi người bị đăng xuất (kể cả kẻ xấu).
+Someone can make their own cookie `{"_user_id": "1"}` with a valid signature, which means **logging in as anyone without a password**.
 
-### Hiện tại trong project
+Fix: change `SECRET_KEY`. Every old cookie stops matching, so everyone gets logged out (including the attacker).
+
+### In this project (stage 7)
 
 ```python
-app.config["SECRET_KEY"] = "dev-only-change-me"
+SECRET_KEY=os.environ.get("SECRET_KEY")
 ```
-
-Tạm ổn khi code trên máy, nhưng key này **đã nằm trên GitHub**, ai cũng đọc được. Trước khi deploy (giai đoạn 7):
 
 ```python
-import os
-
-secret = os.environ.get("SECRET_KEY")
-if not secret:
-    raise RuntimeError("SECRET_KEY is not set")
-app.config["SECRET_KEY"] = secret
+# fail loudly at startup instead of running with no key
+if not app.config["SECRET_KEY"]:
+    raise RuntimeError("SECRET_KEY is not set. Copy .env.example to .env and fill it in.")
 ```
 
-- Để key trong `.env` (đã có trong `.gitignore`).
-- Tạo key ngẫu nhiên: `python -c "import secrets; print(secrets.token_hex(32))"`
-- Key trên server khác key trên máy.
+- The key lives in `.env` (in `.gitignore`, never committed). `.env.example` only has a placeholder.
+- Make a random one: `python -c "import secrets; print(secrets.token_hex(32))"`
+- Use a different key on the server than on your laptop.
+- An old dev key (`dev-only-change-me`) is still in the git history from before stage 7, so it must never be used anywhere real.
 
 ---
 
-## Những thứ KHÔNG được bỏ vào session
+## What NOT to put in the session
 
-Vì ai cũng đọc được cookie:
+Because anyone can read the cookie:
 
-- Không bỏ mật khẩu, hash mật khẩu, token, thông tin riêng tư.
-- Chỉ bỏ thứ nhỏ, không bí mật, như `user_id`.
-- Cookie bị giới hạn khoảng 4KB, nên cũng không bỏ dữ liệu lớn.
+- No passwords, password hashes, tokens or private info.
+- Only small, non-secret things like `user_id`.
+- Cookies are limited to about 4KB, so no big data either.
 
 ---
 
-## Các cờ (flag) của cookie
+## Cookie flags
 
-| Cờ | Ý nghĩa | Chống được gì |
+| Flag | Meaning | Protects against |
 |---|---|---|
-| `HttpOnly` | JS không đọc được cookie (`document.cookie` không thấy) | Bị XSS thì script lạ cũng không lấy cắp được cookie |
-| `Secure` | Chỉ gửi cookie qua HTTPS | Bị nghe lén trên mạng (wifi quán cà phê) |
-| `SameSite=Lax` | Trang web khác gửi request (form POST) tới mình thì không kèm cookie | CSRF |
+| `HttpOnly` | JS can't read the cookie (`document.cookie` doesn't see it) | XSS: injected scripts can't steal the cookie |
+| `Secure` | Cookie only sent over HTTPS | Someone listening on the network (coffee shop wifi) |
+| `SameSite=Lax` | Not sent on requests (like form POSTs) that come from other websites | CSRF |
 
-Flask mặc định đã bật `HttpOnly` cho cookie `session`. `Secure` và `SameSite` cần tự bật khi deploy:
+In this project (`app/__init__.py`), for both the `session` and `remember_token` cookies:
 
 ```python
-app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["REMEMBER_COOKIE_SECURE"] = True
-app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+SESSION_COOKIE_HTTPONLY=True,
+SESSION_COOKIE_SAMESITE="Lax",
+SESSION_COOKIE_SECURE=cookie_secure,
+REMEMBER_COOKIE_HTTPONLY=True,
+REMEMBER_COOKIE_SAMESITE="Lax",
+REMEMBER_COOKIE_SECURE=cookie_secure,
 ```
 
-Không bật `Secure` khi chạy `flask run` trên máy, vì máy chạy `http://` chứ không phải `https://`, cookie sẽ không được gửi và không đăng nhập được.
+`cookie_secure` comes from `COOKIE_SECURE` in `.env`, on by default. Set `COOKIE_SECURE=0` on your laptop, because `flask run` is `http://`, not `https://`, and a Secure cookie would never be sent, so you could never stay logged in.
 
-### CSRF là gì?
+### What is CSRF?
 
-Mình đang đăng nhập trang ToDo. Một trang xấu có form ẩn tự POST tới `/logout` hoặc `/api/lists/5` (DELETE). Trình duyệt tự gửi kèm cookie của mình, nên server tưởng là mình làm.
+You're logged in to the to-do app. A malicious site has a hidden form that POSTs to `/logout` or sends DELETE to `/api/lists/5`. Your browser automatically attaches your cookie, so the server thinks it was you.
 
-`SameSite=Lax` chặn việc gửi kèm cookie trong trường hợp đó. Đây cũng là lý do `/logout` chỉ nhận POST: nếu nhận GET thì chỉ một thẻ `<img src="/logout">` ở trang khác cũng đăng xuất được mình.
+Two defenses in this project:
 
----
+1. **`SameSite=Lax`** stops the cookie from being sent in that case.
+2. **CSRF tokens** (Flask-WTF): every form has a hidden `csrf_token`, and the JS sends an `X-CSRFToken` header on every non-GET request. Another site can't read our pages, so it can't get the token.
 
-## Xem cookie thật
-
-F12 -> tab **Application** -> **Cookies** -> `http://127.0.0.1:5000`:
-
-- `session`: cột HttpOnly có dấu tick.
-- `remember_token`: có ngày hết hạn (Expires) xa.
-
-Thử xoá `session` và `remember_token` rồi reload: bị đưa về `/login`.
-
-Thử sửa vài ký tự trong `session` rồi reload: chữ ký sai, Flask bỏ cookie, cũng bị đưa về `/login` (nếu đã xoá `remember_token`).
+That's also why `/logout` only accepts POST: if it accepted GET, a single `<img src="/logout">` on another site could log you out.
 
 ---
 
-## Tóm tắt
+## See the real cookies
 
-- HTTP không nhớ ai, cookie là cách để nhớ.
-- Flask lưu `session` ngay trong cookie, ở trình duyệt.
-- Cookie được **ký** bằng `SECRET_KEY`: đọc được, nhưng không sửa được.
-- Lộ `SECRET_KEY` = ai cũng giả làm được user bất kỳ. Đổi key là cách sửa.
-- Chỉ bỏ `user_id` vào session, không bỏ thứ bí mật.
-- Khi deploy: key để trong `.env`, bật `Secure` + `SameSite`.
+F12 -> **Application** tab -> **Cookies** -> `http://127.0.0.1:5000`:
+
+- `session`: the HttpOnly column is ticked.
+- `remember_token`: has an expiry date far in the future.
+
+Delete `session` and `remember_token`, then reload: you get sent to `/login`.
+
+Edit a few characters in `session`, then reload: the signature is wrong, Flask ignores the cookie, you also get sent to `/login` (if `remember_token` is deleted too).
+
+---
+
+## Summary
+
+- HTTP doesn't remember anyone, cookies are how it remembers.
+- Flask keeps `session` inside the cookie, in the browser.
+- The cookie is **signed** with `SECRET_KEY`: readable, but not editable.
+- A leaked `SECRET_KEY` = anyone can pretend to be any user. Changing the key fixes it.
+- Only put `user_id` in the session, nothing secret.
+- The key lives in `.env`. Cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` everywhere except your laptop.

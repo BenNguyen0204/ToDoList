@@ -1,86 +1,119 @@
-# Ghi chú: Thiết kế database
+# Notes: Database design
 
-## Tổng quan
+## Overview
 
 ```text
 users 1 ──── N lists 1 ──── N tasks
 ```
 
-Một user có nhiều list, một list có nhiều task.
+One user has many lists, one list has many tasks.
 
-Bảng `users` thêm ở giai đoạn 6, còn giai đoạn 3 chỉ cần `lists` và `tasks`.
+The `users` table was added in stage 6. Stage 3 only needed `lists` and `tasks`. After stage 7, `users` also got a display name, email and timezone, and `tasks` got a column that remembers whether a reminder was already sent.
 
 ---
 
-## Các bảng
+## Tables
 
-### `users` (giai đoạn 6)
+### `users` (stage 6)
 
-| Cột | Kiểu | Ràng buộc |
+| Column | Type | Constraints |
 |---|---|---|
-| `id` | Integer | Khóa chính |
-| `username` | String(32) | Bắt buộc, unique, lưu chữ thường |
-| `password_hash` | String(255) | Bắt buộc |
-| `created_at` | DateTime | Bắt buộc, mặc định là lúc tạo |
+| `id` | Integer | Primary key |
+| `username` | String(32) | Required, unique, stored lowercase. Used to log in, **can't be changed** |
+| `display_name` | String(50) | Optional. The name shown in the app, can be anything, **doesn't have to be unique** |
+| `email` | String(254) | Optional, unique, stored lowercase |
+| `email_verified_at` | DateTime | Optional. When the verification link was clicked. `NULL` = not verified |
+| `timezone` | String(64) | Optional, e.g. `America/Toronto`. Sent automatically by the browser |
+| `password_hash` | String(255) | Required |
+| `created_at` | DateTime | Required, defaults to the time the row is created |
 
 ### `lists`
 
-| Cột | Kiểu | Ràng buộc |
+| Column | Type | Constraints |
 |---|---|---|
-| `id` | Integer | Khóa chính |
-| `name` | String(100) | Bắt buộc |
-| `user_id` | Integer | Thêm ở giai đoạn 6: khóa ngoại tới `users.id`, bắt buộc, có index |
+| `id` | Integer | Primary key |
+| `name` | String(100) | Required |
+| `user_id` | Integer | Added in stage 6: foreign key to `users.id`, required, `ondelete="CASCADE"`, indexed |
 
 ### `tasks`
 
-| Cột | Kiểu | Ràng buộc |
+| Column | Type | Constraints |
 |---|---|---|
-| `id` | Integer | Khóa chính |
-| `list_id` | Integer | Khóa ngoại tới `lists.id`, bắt buộc, `ondelete="CASCADE"`, có index |
-| `text` | String(500) | Bắt buộc |
-| `completed` | Boolean | Bắt buộc, mặc định `False` |
-| `color` | String(7) | Không bắt buộc, ví dụ `#ff0000` |
-| `due_date` | Date | Không bắt buộc |
-| `position` | Integer | Bắt buộc, thứ tự kéo thả |
+| `id` | Integer | Primary key |
+| `list_id` | Integer | Foreign key to `lists.id`, required, `ondelete="CASCADE"`, indexed |
+| `text` | String(500) | Required |
+| `completed` | Boolean | Required, defaults to `False` |
+| `color` | String(7) | Optional, e.g. `#ff0000` |
+| `due_date` | Date | Optional |
+| `position` | Integer | Required, drag and drop order |
+| `reminded_for` | Date | Optional. The due date a reminder email was already sent for |
 
 ---
 
-## Vì sao thiết kế như vậy
+## Why it's designed this way
 
-- **`tasks` không cần `user_id`:** task thuộc list, list thuộc user, nên đã biết task của ai. Thêm nữa thì dữ liệu dễ bị lệch nhau.
-- **`id` do database cấp:** `Date.now()` trong JS là số 13 chữ số, quá lớn so với Integer của PostgreSQL (khoảng 2,1 tỷ). JS phải dùng `id` do server trả về.
-- **`position` lưu thứ tự kéo thả:** database không đảm bảo thứ tự dòng, nên cần cột này để sắp xếp.
-- **`due_date` ở database, `dueDate` ở JS:** Python và SQL quen dùng `snake_case`, còn `to_dict()` sẽ đổi sang `dueDate` cho JS.
-- **Index cho `lists.user_id` và `tasks.list_id`:** app liên tục tìm theo hai cột này, mà PostgreSQL không tự tạo index cho khóa ngoại.
-- **`completed` và `position` là `nullable=False`:** tránh dữ liệu bị `NULL` làm sai bộ lọc và thứ tự.
-- **Tên class là `TodoList`:** bảng vẫn tên `lists`, và class không dễ nhầm với `list` của Python.
+### From the start
+
+- **`tasks` has no `user_id`:** a task belongs to a list and a list belongs to a user, so we already know whose task it is. Storing it twice would let the data get out of sync.
+- **The database assigns `id`:** `Date.now()` in JS is a 13-digit number, way bigger than a PostgreSQL Integer (about 2.1 billion). The JS has to use the `id` the server sends back.
+- **`position` stores the drag and drop order:** a database doesn't guarantee row order, so this column is needed for sorting.
+- **`due_date` in the database, `dueDate` in JS:** Python and SQL use `snake_case`, and `to_dict()` renames it to `dueDate` for the JS.
+- **Indexes on `lists.user_id` and `tasks.list_id`:** the app searches by these two columns all the time, and PostgreSQL doesn't index foreign keys by itself.
+- **`completed` and `position` are `nullable=False`:** stops `NULL` values from breaking the filters and the order.
+- **The class is called `TodoList`:** the table is still `lists`, and the class doesn't get confused with Python's `list`.
+
+### Display name
+
+- **`username` and `display_name` are separate:** `username` is for logging in, so it has to be unique and never change. `display_name` is just for showing, people can use anything, and two people can have the same one.
+- **`display_name` can be empty:** then the app shows the `username`. The code uses `user.shown_name` (a `@property` in `models.py`) so we don't write `display_name or username` everywhere.
+- **Empty is stored as `None`, not `""`:** only one way to say "no name set", easier to check.
+
+### Email
+
+- **`email` is unique:** one email belongs to one account, otherwise a reminder could go to the wrong account.
+- **`email` can be empty:** email is optional, old accounts without one keep working. Multiple `NULL`s don't count as duplicates, so `unique` still works.
+- **`email_verified_at` is a datetime, not `True/False`:** it tells us if it's verified (`NULL` or not) and also when.
+- **Changing the email sets `email_verified_at` back to `NULL`:** the new address has to be verified again. Reminders only go to verified emails.
+- **254 characters:** the longest an email address can be.
+
+### Timezone and reminders
+
+- **`timezone` stores a name (`America/Toronto`), not an offset (`-5`):** the offset changes with daylight saving time, the name doesn't. Python works out the right offset for each date.
+- **Why we need a timezone:** "tomorrow" in Toronto and in Vietnam can be two different dates. A "your task is due tomorrow" email has to use the user's own time.
+- **`reminded_for` is a date, not `True/False`:** if we already sent a reminder and the user then **changes the due date**, `reminded_for` no longer equals `due_date`, so the new date gets its own reminder. With `True/False` we'd have to remember to reset it every time the date changes.
+- **Also thanks to `reminded_for`:** if the reminder job accidentally runs twice in one day, nobody gets 2 emails.
 
 ---
 
-## Khóa chính và khóa ngoại
+## Primary keys and foreign keys
 
-- **Khóa chính (primary key):** định danh duy nhất cho mỗi dòng, ví dụ `tasks.id`.
-- **Khóa ngoại (foreign key):** cột trỏ tới khóa chính của bảng khác, ví dụ `tasks.list_id` trỏ tới `lists.id`. Database sẽ không cho tạo task thuộc một list không tồn tại.
-- **Quan hệ một-nhiều:** khóa ngoại luôn nằm ở phía "nhiều", nên `list_id` nằm trong `tasks`.
+- **Primary key:** a unique ID for every row, e.g. `tasks.id`.
+- **Foreign key:** a column that points to another table's primary key, e.g. `tasks.list_id` points to `lists.id`. The database won't let you create a task in a list that doesn't exist.
+- **One-to-many:** the foreign key always goes on the "many" side, so `list_id` is in `tasks` and `user_id` is in `lists`.
 
 ---
 
-## Xóa list thì task đi đâu?
+## What gets deleted along with what?
 
-Có 2 chỗ khai báo việc xóa theo:
+```text
+delete a user  ->  all of their lists go  ->  all tasks in those lists go
+delete a list  ->  all of its tasks go
+```
 
-| Khai báo | Nằm ở đâu | Ai thực hiện |
+It's declared in 2 places:
+
+| Declaration | Where | Who does it |
 |---|---|---|
-| `cascade="all, delete-orphan"` trên `db.relationship` | Python | SQLAlchemy |
-| `ondelete="CASCADE"` trên khóa ngoại | Database | Database |
+| `cascade="all, delete-orphan"` on `db.relationship` | Python | SQLAlchemy |
+| `ondelete="CASCADE"` on the foreign key | Database | The database |
 
-Lưu ý với SQLite: mặc định SQLite không tự thực thi `ondelete="CASCADE"`. Task vẫn bị xóa theo list nhờ `cascade="all, delete-orphan"`, miễn là xóa bằng `db.session.delete(list)`.
+Note for SQLite: by default SQLite doesn't enforce `ondelete="CASCADE"`. Tasks still get deleted with their list thanks to `cascade="all, delete-orphan"`, as long as the list is deleted with `db.session.delete(list)`.
 
 ---
 
-## Quy tắc đặt tên constraint
+## Constraint naming convention
 
-Khai báo trong `app/extensions.py`, trước migration đầu tiên:
+Set in `app/extensions.py`, before the first migration:
 
 ```python
 from sqlalchemy import MetaData
@@ -96,31 +129,55 @@ convention = {
 db = SQLAlchemy(metadata=MetaData(naming_convention=convention))
 ```
 
-Tên sinh ra:
+Names it generates:
 
-| Khóa | Loại | Tác dụng | Tên sinh ra |
+| Key | Type | What it does | Generated name |
 |---|---|---|---|
-| `pk` | Primary key | Định danh mỗi dòng | `pk_tasks` |
-| `fk` | Foreign key | Nối sang bảng khác | `fk_tasks_list_id_lists` |
-| `uq` | Unique | Không cho trùng giá trị | `uq_users_username` |
-| `ix` | Index | Giúp tìm kiếm nhanh hơn | `ix_tasks_list_id` |
-| `ck` | Check | Kiểm tra điều kiện của dữ liệu | `ck_tasks_valid_color` |
+| `pk` | Primary key | Identifies each row | `pk_tasks` |
+| `fk` | Foreign key | Links to another table | `fk_tasks_list_id_lists`, `fk_lists_user_id_users` |
+| `uq` | Unique | No duplicate values | `uq_users_username`, `uq_users_email` |
+| `ix` | Index | Faster lookups | `ix_tasks_list_id`, `ix_lists_user_id` |
+| `ck` | Check | Checks a condition on the data | `ck_tasks_valid_color` |
 
-Vì sao cần: muốn sửa hoặc xóa một ràng buộc, migration phải biết tên của nó. Nếu không đặt tên, mỗi database tự đặt theo kiểu riêng, hoặc để trống như SQLite.
+Why: to change or drop a constraint, a migration needs to know its name. Without a convention every database names them its own way, or not at all (SQLite).
 
-SQLite cũng cần thêm `Migrate(render_as_batch=True)` vì nó không cho thêm khóa ngoại vào bảng đã có.
+SQLite also needs `Migrate(render_as_batch=True)` because it can't add a foreign key to an existing table.
 
 ---
 
-## Lệnh migration
+## Migration history
+
+In order, files are in `migrations/versions/`:
+
+| Revision | Name | Change |
+|---|---|---|
+| `a62d8d9419da` | Create lists and tasks | Create `lists`, `tasks` (stage 3) |
+| `36f0d677e920` | Add users and list owner | Create `users`, add `lists.user_id` (stage 6) |
+| `c08b573e7c6b` | Add display name to users | Add `users.display_name` |
+| `ad38363f31db` | Add email, timezone and task reminders | Add `users.email` (unique), `users.email_verified_at`, `users.timezone`, `tasks.reminded_for` |
+
+- The last three only **add optional columns**, so they run fine on a database that already has data. Old rows get `NULL`.
+- `36f0d677e920` adds a **required** `lists.user_id`. It worked because `lists` was empty at the time. If `lists` had rows, the old rows would need a `user_id` first.
+- Check which revision the database is on: `flask db current`.
+
+---
+
+## Migration commands
 
 ```powershell
-flask --app wsgi db init                               # chỉ chạy một lần
-flask --app wsgi db migrate -m "Create lists and tasks"  # sinh file migration
-flask --app wsgi db upgrade                            # áp dụng vào database
-flask --app wsgi db downgrade                          # lùi lại một bước
+# only once
+flask --app wsgi db init
+# generate a migration file
+flask --app wsgi db migrate -m "Create lists and tasks"
+# apply it to the database
+flask --app wsgi db upgrade
+# go back one step
+flask --app wsgi db downgrade
+# which revision the database is on
+flask --app wsgi db current
 ```
 
-- `create_app()` phải import models thì lệnh `migrate` mới thấy bảng.
-- Luôn đọc file sinh ra trong `migrations/versions/` trước khi chạy `upgrade`.
-- Thêm cột bắt buộc vào bảng đã có dữ liệu sẽ lỗi, vì dòng cũ không có giá trị cho cột đó.
+- `create_app()` has to import the models, or `migrate` won't see the tables.
+- Always read the generated file in `migrations/versions/` before running `upgrade`.
+- Adding a required column to a table that already has data fails, because the old rows have no value for it.
+- If you change `models.py` and forget `migrate` + `upgrade`, the app crashes with `no such table: users` or `no such column`.

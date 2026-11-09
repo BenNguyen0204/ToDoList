@@ -1,50 +1,51 @@
-# Ghi chú: GET, POST và Blueprint trong Flask
+# Notes: GET, POST and Blueprints in Flask
 
-## Blueprint có tự chạy không?
+## Does a Blueprint run by itself?
 
-Không. Blueprint chỉ hoạt động sau khi được đăng ký bằng `register_blueprint`.
+No. A Blueprint only works after it's registered with `register_blueprint`.
 
-Khi server khởi động, việc này diễn ra một lần:
+This happens once, when the server starts:
 
 ```text
-wsgi.py gọi create_app()
-  → tạo Flask app
-  → import pages.py (các route được gom vào blueprint)
-  → app.register_blueprint(...) (gắn các route vào app)
+wsgi.py calls create_app()
+  → creates the Flask app
+  → imports pages.py (its routes are collected in the blueprint)
+  → app.register_blueprint(...) (attaches those routes to the app)
 ```
 
-Sau đó, mỗi khi có request, Flask tự tìm route khớp và gọi hàm tương ứng.
+After that, for every request Flask finds the matching route and calls its function.
 
-- Quên `register_blueprint` thì không báo lỗi lúc khởi động, nhưng vào URL sẽ bị 404.
-- Bạn không tự gọi hàm `index()`. Flask gọi nó khi có người vào `/`.
+- Forget `register_blueprint` and there's no error at startup, but the URLs give 404.
+- You never call `index()` yourself. Flask calls it when someone opens `/`.
 
 ---
 
-## GET và POST là gì?
+## What are GET and POST?
 
-Mỗi request gửi đến server đều có một phương thức, cho server biết client muốn làm gì.
+Every request to the server has a method that tells the server what the client wants to do.
 
 | | GET | POST |
 |---|---|---|
-| **Mục đích** | Lấy dữ liệu | Gửi dữ liệu lên để tạo mới |
-| **Dữ liệu nằm ở** | URL, ví dụ `/tasks?done=true` | Body của request |
-| **Làm thay đổi dữ liệu không** | Không | Có |
-| **Gửi lại nhiều lần** | An toàn, kết quả như nhau | Mỗi lần có thể tạo thêm một bản ghi |
-| **Xảy ra khi** | Mở URL trên trình duyệt, tải CSS, ảnh | Gửi form, gọi `fetch` với `method: "POST"` |
+| **Purpose** | Get data | Send data to create something |
+| **Data goes in** | The URL, e.g. `/tasks?done=true` | The request body |
+| **Changes data?** | No | Yes |
+| **Sending it again** | Safe, same result | Can create another record each time |
+| **Happens when** | Opening a URL, loading CSS, images | Submitting a form, `fetch` with `method: "POST"` |
 
-Không đưa mật khẩu hay dữ liệu nhạy cảm lên URL của GET, vì URL được lưu trong lịch sử trình duyệt và log của server.
+Never put passwords or sensitive data in a GET URL, because URLs end up in the browser history and server logs.
 
 ---
 
-## Viết route trong Flask
+## Writing routes in Flask
 
-Mặc định, route chỉ nhận GET. Muốn nhận phương thức khác thì phải khai báo `methods`.
+By default a route only accepts GET. To accept other methods, declare `methods`.
 
 ```python
 from flask import Blueprint, jsonify, request
 
 api = Blueprint("api", __name__)
-tasks = []  # ví dụ thôi, dữ liệu sẽ mất khi tắt server
+# just an example, the data is lost when the server stops
+tasks = []
 
 
 @api.route("/tasks", methods=["GET"])
@@ -60,164 +61,168 @@ def create_task():
     return jsonify(task), 201
 ```
 
-- `request.get_json()`: đọc JSON trong body của request.
-- `request.args.get("done")`: đọc tham số trên URL của GET, ví dụ `/tasks?done=true`.
-- `jsonify(...)`: trả về dữ liệu dạng JSON.
-- `, 201`: đặt status code cho response.
+- `request.get_json()`: reads the JSON in the request body.
+- `request.args.get("done")`: reads a parameter from a GET URL, e.g. `/tasks?done=true`.
+- `jsonify(...)`: returns the data as JSON.
+- `, 201`: sets the response status code.
 
-Flask 2.0 trở lên có cách viết ngắn hơn: `@api.get("/tasks")` và `@api.post("/tasks")`.
+Flask 2.0+ has a shorter way: `@api.get("/tasks")` and `@api.post("/tasks")`.
 
 ---
 
-## Gọi từ JavaScript
+## Calling it from JavaScript
 
 ```js
-// GET: lấy danh sách task
+// GET: get the list of tasks
 const response = await fetch("/api/tasks");
 const tasks = await response.json();
 
-// POST: tạo task mới
+// POST: create a new task
 const response = await fetch("/api/tasks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: "Học Flask" }),
+    body: JSON.stringify({ text: "Learn Flask" }),
 });
 const task = await response.json();
 ```
 
-Hai đoạn trên là hai ví dụ riêng, nên đừng dán chung vào một chỗ vì `response` bị khai báo trùng.
+These are two separate examples, don't paste them together because `response` would be declared twice.
 
-Nếu thiếu header `Content-Type: application/json`, `request.get_json()` sẽ báo lỗi 415.
+Without the `Content-Type: application/json` header, `request.get_json()` fails with 415.
+
+In this project, every non-GET request also sends an `X-CSRFToken` header (stage 7), see `SESSION_COOKIE.md`.
 
 ---
 
-## Luồng khi đổi tên list
+## What happens when you rename a list
 
-Ví dụ đổi tên list có id 5:
+Renaming the list with id 5:
 
 ```text
-1. Sửa tên, nhấn Enter hoặc bấm ra ngoài   (trình duyệt)
+1. Edit the name, press Enter or click away   (browser)
         ↓
-2. JS gửi PATCH /api/lists/5               (apiSave, kèm {"name": "Việc nhà"})
+2. JS sends PATCH /api/lists/5                (apiSave, with {"name": "Chores"})
         ↓
-3. Flask chạy update_list(list_id=5)       (lấy 5 từ URL)
+3. Flask runs update_list(list_id=5)          (5 comes from the URL)
         ↓
-4. get_list_or_404(5)                      (tìm list, không có thì trả 404)
+4. get_list_or_404(5)                         (find the list for the current user, 404 if not found)
         ↓
-5. get_json_body()                         (đọc JSON, sai định dạng thì trả 400)
+5. get_json_body()                            (read the JSON, 400 if it's not valid)
         ↓
-6. todo_list.name = validate_text(...)     (mới đổi trong session, chưa lưu hẳn)
+6. todo_list.name = validate_text(...)        (changed in the session only, not saved yet)
         ↓
-7. db.session.commit()                     (lưu vào database)
+7. db.session.commit()                        (saved to the database)
         ↓
-8. return jsonify(todo_list.to_dict())     (trả list đã sửa về cho JS, status 200)
+8. return jsonify(todo_list.to_dict())        (send the updated list back to JS, status 200)
         ↓
-9. JS cập nhật list.name, vẽ lại giao diện
+9. JS updates list.name and redraws
 ```
 
-So với luồng thêm list, có 2 điểm khác:
+Compared to adding a list, 2 differences:
 
-- id đã có sẵn nên nằm trên URL. Khi thêm list, database mới cấp id lúc `commit()`.
-- Không cần `db.session.add()` vì object lấy từ database đã nằm trong session.
+- The id already exists, so it's in the URL. When adding a list, the database only assigns the id at `commit()`.
+- No `db.session.add()` needed, an object loaded from the database is already in the session.
 
 ---
 
-## Id được tạo và luân chuyển thế nào
+## How ids are created and passed around
 
-Database sinh ra id một lần duy nhất, backend gửi nó cho frontend, rồi frontend gửi lại trên URL mỗi khi muốn thao tác với list đó. Ví dụ list mới được cấp id 5:
+The database creates an id exactly once, the backend sends it to the frontend, and the frontend sends it back in the URL whenever it wants to do something with that list. Say a new list gets id 5:
 
 ```text
- CHUẨN BỊ (làm một lần)
- models.py:9            id = db.Column(db.Integer, primary_key=True)
+ SETUP (once)
+ models.py              id = db.Column(db.Integer, primary_key=True)
     ↓ flask db migrate + flask db upgrade
- instance/todo.db       bảng lists có cột id tự cấp số
+ instance/todo.db       the lists table has an auto-numbered id column
 
 
- TẠO LIST
- Trình duyệt   bấm +, nhập tên
-    ↓ POST /api/lists   {"name": "Việc nhà"}      ← chưa có id
+ CREATING THE LIST
+ Browser       click +, type a name
+    ↓ POST /api/lists   {"name": "Chores"}        ← no id yet
  Flask         create_list() → add() → commit()
     ↓ INSERT
- Database      thêm dòng mới, TỰ CẤP id = 5       ← id ra đời ở đây
+ Database      new row, ASSIGNS id = 5            ← the id is born here
     ↓
  Flask         todo_list.id = 5
-    ↓ to_dict() + jsonify, trả 201
- Trình duyệt   {"id": 5, "name": "Việc nhà", "tasks": []}
+    ↓ to_dict() + jsonify, returns 201
+ Browser       {"id": 5, "name": "Chores", "tasks": []}
 
 
- FRONTEND GIỮ ID
- lists                  có phần tử {id: 5, ...}
- currentListId = 5      list đang chọn
- localStorage           nhớ currentListId sau khi tải lại trang
+ FRONTEND KEEPS THE ID
+ lists                  has an item {id: 5, ...}
+ currentListId = 5      the selected list
+ localStorage           remembers currentListId after a reload
 
 
- DÙNG LẠI ID
- Trình duyệt   đổi tên list
-    ↓ PATCH /api/lists/5   {"name": "Đi học"}     ← id nằm trên URL
+ USING THE ID AGAIN
+ Browser       rename the list
+    ↓ PATCH /api/lists/5   {"name": "School"}     ← id is in the URL
  Flask         <int:list_id> → update_list(list_id=5)
     ↓ get_list_or_404(5)
- Database      tìm dòng có id = 5, cập nhật rồi lưu
+ Database      find the row with id = 5, update it, save
 
 
- TẢI LẠI TRANG
- loadList()    GET /api/lists → backend trả mọi list kèm id
-               currentListId còn trong lists thì giữ, không thì lấy list đầu
+ RELOADING THE PAGE
+ loadList()    GET /api/lists → backend returns every list with its id
+               keep currentListId if it's still in lists, otherwise take the first one
 
 
- TASK GẮN VỚI LIST
- tasks.list_id = 5      ghi lại task này thuộc list có id 5
+ TASKS POINT TO THE LIST
+ tasks.list_id = 5      records that this task belongs to list 5
 ```
 
-Id mang tên khác nhau ở mỗi nơi, nhưng vẫn là cùng một số:
+The id has a different name in each place, but it's the same number:
 
-| Nơi | Tên |
+| Where | Name |
 |---|---|
-| Database, bảng `lists` | `id` |
-| Database, bảng `tasks` | `list_id` |
-| Object Python | `todo_list.id` |
-| JSON gửi cho JS | `"id"` |
-| Biến JS | `list.id`, `currentListId` |
+| Database, `lists` table | `id` |
+| Database, `tasks` table | `list_id` |
+| Python object | `todo_list.id` |
+| JSON sent to JS | `"id"` |
+| JS variable | `list.id`, `currentListId` |
 | URL | `/api/lists/5` |
-| Tham số Flask | `list_id` |
+| Flask parameter | `list_id` |
 
-3 điều nên nhớ:
+3 things to remember:
 
-1. Chỉ database tạo id. Các nơi khác chỉ lưu và chuyển tiếp nó.
-2. Tạo mới thì chưa có id, các thao tác sau thì phải có. Vì vậy `POST /lists` không có id trên URL, còn `PATCH /lists/5` thì có.
-3. Id gửi từ client không được tin ngay. `get_list_or_404` kiểm tra nó có tồn tại không, và sau này còn phải kiểm tra list đó có thuộc user hiện tại không.
-
----
-
-## Các phương thức khác
-
-Một REST API cho task thường có đủ các route sau:
-
-| Phương thức | URL | Việc làm |
-|---|---|---|
-| GET | `/api/tasks` | Lấy tất cả task |
-| GET | `/api/tasks/5` | Lấy task số 5 |
-| POST | `/api/tasks` | Tạo task mới |
-| PUT | `/api/tasks/5` | Thay toàn bộ task số 5 |
-| PATCH | `/api/tasks/5` | Sửa một phần, ví dụ chỉ đổi `done` |
-| DELETE | `/api/tasks/5` | Xóa task số 5 |
-
-Cùng một URL nhưng khác phương thức thì là hai việc khác nhau.
+1. Only the database creates ids. Everything else just stores and passes them on.
+2. Creating something has no id yet, everything after that needs one. That's why `POST /lists` has no id in the URL but `PATCH /lists/5` does.
+3. Never trust an id from the client. `get_list_or_404` checks that it exists **and** that it belongs to the logged-in user (stage 6).
 
 ---
 
-## Status code hay gặp
+## Other methods
 
-| Code | Nghĩa | Khi nào gặp |
+A REST API for tasks usually has these routes:
+
+| Method | URL | What it does |
 |---|---|---|
-| 200 | OK | Yêu cầu thành công |
-| 201 | Created | POST tạo được bản ghi mới |
-| 204 | No Content | Thành công, không có gì để trả về, thường gặp khi DELETE |
-| 400 | Bad Request | Dữ liệu gửi lên sai |
-| 401 | Unauthorized | Chưa đăng nhập |
-| 403 | Forbidden | Đã đăng nhập nhưng không có quyền |
-| 404 | Not Found | URL hoặc bản ghi không tồn tại |
-| 405 | Method Not Allowed | Route có tồn tại nhưng không nhận phương thức này |
-| 415 | Unsupported Media Type | Sai `Content-Type` |
-| 500 | Internal Server Error | Code phía server bị lỗi |
+| GET | `/api/tasks` | Get all tasks |
+| GET | `/api/tasks/5` | Get task 5 |
+| POST | `/api/tasks` | Create a task |
+| PUT | `/api/tasks/5` | Replace task 5 completely |
+| PATCH | `/api/tasks/5` | Change part of it, e.g. only `done` |
+| DELETE | `/api/tasks/5` | Delete task 5 |
 
-Lỗi 405 hay gặp nhất khi mới học: gửi POST vào route chưa khai báo `methods=["POST"]`.
+Same URL with a different method means a different action.
+
+---
+
+## Common status codes
+
+| Code | Meaning | When |
+|---|---|---|
+| 200 | OK | Request worked |
+| 201 | Created | POST created a new record |
+| 204 | No Content | Worked, nothing to send back, common for DELETE |
+| 400 | Bad Request | The data sent is wrong |
+| 401 | Unauthorized | Not logged in |
+| 403 | Forbidden | Logged in but not allowed |
+| 404 | Not Found | The URL or record doesn't exist |
+| 405 | Method Not Allowed | The route exists but doesn't accept this method |
+| 415 | Unsupported Media Type | Wrong `Content-Type` |
+| 429 | Too Many Requests | Called too many times, blocked by the rate limit (see `RATE_LIMIT.md`) |
+| 500 | Internal Server Error | The server code crashed |
+| 502 | Bad Gateway | Our server is fine but an outside service failed. In this project: Brevo couldn't send an email |
+
+The most common 405 when starting out: sending a POST to a route without `methods=["POST"]`.

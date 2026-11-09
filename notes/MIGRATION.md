@@ -1,28 +1,28 @@
-# Ghi chú: Migration
+# Notes: Migrations
 
-## Migration là gì?
+## What is a migration?
 
-Migration là cách đưa thay đổi từ `models.py` xuống database thật.
+A migration is how a change in `models.py` gets into the real database.
 
-Có 2 nơi tách biệt:
+There are 2 separate places:
 
-- **`models.py`:** mô tả bảng bằng code.
-- **`todo.db`:** bảng thật, nơi lưu dữ liệu.
+- **`models.py`:** describes the tables in code.
+- **`todo.db`:** the real tables, where the data lives.
 
-Sửa `models.py` thì `todo.db` không tự đổi. Migration là cầu nối giữa hai nơi đó, và giữ được dữ liệu đang có.
+Changing `models.py` doesn't change `todo.db` by itself. A migration is the bridge between the two, and it keeps the existing data.
 
-Có thể hình dung `models.py` là bản vẽ, database là căn nhà, còn migration là từng lần sửa nhà theo bản vẽ mới mà đồ đạc bên trong vẫn còn.
+Think of `models.py` as the blueprint, the database as the house, and each migration as one renovation that follows the new blueprint without throwing out the furniture.
 
 ---
 
-## Các lệnh
+## Commands
 
-| Lệnh | Nó làm gì | Ví dụ đời thường |
+| Command | What it does | Real-life version |
 |---|---|---|
-| `db init` | Tạo thư mục `migrations/`, chỉ chạy một lần | Mua cuốn sổ |
-| `db migrate` | So `models.py` với database, ghi thay đổi vào một file. **Chưa đổi database** | Viết việc cần làm vào sổ |
-| `db upgrade` | Chạy file đó, **lúc này database mới đổi** | Làm theo sổ |
-| `db downgrade` | Hoàn tác lần thay đổi gần nhất | Làm ngược lại |
+| `db init` | Creates the `migrations/` folder, only run once | Buy a notebook |
+| `db migrate` | Compares `models.py` with the database and writes the changes to a file. **Doesn't touch the database yet** | Write the to-do list in the notebook |
+| `db upgrade` | Runs that file, **now the database changes** | Do what the notebook says |
+| `db downgrade` | Undoes the most recent change | Undo it |
 
 ```powershell
 flask --app wsgi db init
@@ -33,96 +33,99 @@ flask --app wsgi db downgrade
 
 ---
 
-## Quy trình mỗi lần đổi cấu trúc
+## Every time the structure changes
 
-1. Sửa bảng hoặc cột trong `models.py`.
-2. Chạy `db migrate -m "mô tả thay đổi"`.
-3. Mở file mới trong `migrations/versions/` và đọc kiểm tra.
-4. Chạy `db upgrade`.
-5. Commit cả `models.py` và thư mục `migrations/`.
+1. Change the table or column in `models.py`.
+2. Run `db migrate -m "describe the change"`.
+3. Open the new file in `migrations/versions/` and read it.
+4. Run `db upgrade`.
+5. Commit both `models.py` and the `migrations/` folder.
 
 ---
 
-## Khi nào cần migrate?
+## When do I need a migration?
 
-| Việc làm | Cần migrate không? |
+| What you did | Migration? |
 |---|---|
-| Thêm, sửa, xóa task, tick hoàn thành | Không, đây là dữ liệu |
-| Sửa `to_dict()`, thêm route, sửa HTML, CSS, JS | Không, đây không phải cấu trúc bảng |
-| Thêm, xóa, đổi tên cột | Có |
-| Đổi kiểu cột hoặc ràng buộc | Có |
-| Thêm, xóa bảng | Có |
+| Add, edit, delete a task, tick it done | No, that's data |
+| Change `to_dict()`, add a route, change HTML, CSS, JS | No, that's not table structure |
+| Add, remove, rename a column | Yes |
+| Change a column's type or constraint | Yes |
+| Add, remove a table | Yes |
 
 ---
 
-## Nếu không migrate thì sao?
+## What if I don't migrate?
 
-- **Sửa `models.py` mà không migrate:** code và database lệch nhau, app báo lỗi `no such column: tasks.priority`.
-- **Dùng `db.create_all()`:** chỉ tạo bảng còn thiếu, không sửa bảng đã có, nên vẫn báo lỗi như trên.
-- **Xóa database rồi tạo lại:** app chạy được nhưng mất hết dữ liệu. Lúc học thì không sao, app có người dùng thì không làm thế được.
-- **Tự chạy `ALTER TABLE` bằng tay:** phải nhớ chạy đúng lệnh trên mọi máy và server, sót một chỗ là database mỗi nơi một khác.
+- **Change `models.py` without migrating:** the code and the database don't match, and the app crashes with `no such column: tasks.priority`.
+- **Use `db.create_all()`:** it only creates missing tables, it doesn't change existing ones, so you still get the error above.
+- **Delete the database and recreate it:** works, but all data is gone. Fine while learning, not once real people use the app.
+- **Run `ALTER TABLE` by hand:** you'd have to remember to run the exact same thing on every machine and server. Miss one and every database is different.
 
 ---
 
-## File migration trông như thế nào?
+## What a migration file looks like
 
 ```python
-revision = "a1b2c3"        # mã của migration này
-down_revision = "9f8e7d"   # migration ngay trước nó
+# this migration's ID
+revision = "a1b2c3"
+# the migration right before it
+down_revision = "9f8e7d"
 
 def upgrade():
-    # đi tới: thêm cột
+    # forward: add a column
     with op.batch_alter_table("tasks") as batch_op:
         batch_op.add_column(sa.Column("priority", sa.Integer(), nullable=True))
 
 def downgrade():
-    # lùi lại: xóa cột
+    # back: remove the column
     with op.batch_alter_table("tasks") as batch_op:
         batch_op.drop_column("priority")
 ```
 
-`down_revision` nối các migration thành một chuỗi, nên database biết mình đang ở đâu và còn phải chạy những cái nào:
+`down_revision` links the migrations into a chain, so the database knows where it is and which ones it still needs to run:
 
 ```text
-Tạo lists, tasks → Thêm users → Thêm user_id → ...
+Create lists, tasks → Add users + user_id → Add display_name → Add email, timezone, reminded_for
 ```
 
-`batch_alter_table` là batch mode, cần cho SQLite vì SQLite không hỗ trợ `ALTER TABLE` đầy đủ. Nó tạo bảng mới, chép dữ liệu sang, xóa bảng cũ rồi đổi tên.
+`batch_alter_table` is batch mode, needed for SQLite because SQLite doesn't fully support `ALTER TABLE`. It creates a new table, copies the data over, drops the old one and renames the new one.
 
 ---
 
-## So với Git
+## Compared to Git
 
 | Git | Migration |
 |---|---|
 | `git commit` | `db migrate` |
-| Lịch sử commit | Thư mục `migrations/versions/` |
-| `git pull` để lấy code mới | `db upgrade` để cập nhật database |
+| Commit history | The `migrations/versions/` folder |
+| `git pull` to get new code | `db upgrade` to update the database |
 | `git revert` | `db downgrade` |
 
 ---
 
-## Đọc log khi chạy
+## Reading the log
 
 ```text
 Running upgrade  -> a62d8d9419da, Create lists and tasks
 Running downgrade a62d8d9419da -> , Create lists and tasks
 ```
 
-- `a62d8d9419da` là mã của migration, giống mã commit trong Git.
-- ` -> a62d8d9419da`: đi từ trạng thái trống lên migration đó.
-- `a62d8d9419da -> `: lùi từ migration đó về trạng thái trống.
-- `Context impl SQLiteImpl`: đang dùng SQLite.
-- `non-transactional DDL`: nếu migration lỗi giữa chừng, SQLite không tự hoàn tác hết các bước đã chạy.
+- `a62d8d9419da` is the migration's ID, like a commit hash in Git.
+- ` -> a62d8d9419da`: going from empty up to that migration.
+- `a62d8d9419da -> `: going from that migration back to empty.
+- `Context impl SQLiteImpl`: using SQLite.
+- `non-transactional DDL`: if a migration fails halfway, SQLite doesn't undo the steps that already ran.
 
-Chạy `db downgrade` rồi `db upgrade` để thử migration chạy được cả hai chiều.
+Run `db downgrade` then `db upgrade` to check a migration works both ways.
 
 ---
 
-## Lưu ý
+## Things to remember
 
-- Luôn đọc file sinh ra trước khi `upgrade`, vì `db migrate` chỉ đoán và có thể đoán sai. Ví dụ đổi tên cột có thể bị hiểu thành xóa cột cũ rồi thêm cột mới, làm mất dữ liệu.
-- `downgrade` xóa bảng thì dữ liệu trong bảng cũng mất, `upgrade` chỉ tạo lại bảng trống. Đừng chạy thử như vậy khi có dữ liệu thật.
-- `create_app()` phải import models thì `db migrate` mới thấy bảng.
-- Thêm cột bắt buộc vào bảng đã có dữ liệu sẽ lỗi, vì dòng cũ không có giá trị cho cột đó.
-- Commit thư mục `migrations/` lên GitHub, nhưng không commit `todo.db`.
+- Always read the generated file before `upgrade`. `db migrate` only guesses and can guess wrong. For example, renaming a column can be read as "drop the old column, add a new one", which loses the data.
+- If `downgrade` drops a table, the data in it is gone, and `upgrade` only creates an empty table again. Don't test like that with real data.
+- `create_app()` has to import the models or `db migrate` won't see the tables.
+- Adding a required column to a table that already has data fails, because the old rows have no value for it.
+- Commit the `migrations/` folder to GitHub, but never `todo.db`.
+- The full list of this project's migrations is in `DATABASE.md`.

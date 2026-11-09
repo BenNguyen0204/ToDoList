@@ -1,544 +1,677 @@
-# Ghi chú: Các hàm và lệnh dùng trong project
+# Notes: Functions and commands used in the project
 
-Tra cứu nhanh mọi hàm, lớp và lệnh dùng trong ToDoList, xếp theo nhóm.
-Mỗi mục ghi giai đoạn bắt đầu dùng, ví dụ **[GĐ 4]**. Mục có dấu ⏳ là của giai đoạn chưa làm tới.
+Quick reference for every function, class and command used in ToDoList, grouped by topic.
+Each entry says which stage it was first used in, e.g. **[Stage 4]**. **[Extra]** = the extras done after stage 7 (account panel, email reminders, phone layout). ⏳ = a stage that isn't done yet.
 
-Mục lục:
+Contents:
 
 1. [Python: Flask](#1-python-flask)
 2. [Python: Database (Flask-SQLAlchemy, SQLAlchemy)](#2-python-database-flask-sqlalchemy-sqlalchemy)
-3. [Python: Migration (Flask-Migrate, Alembic)](#3-python-migration-flask-migrate-alembic)
-4. [Python: Có sẵn trong Python](#4-python-có-sẵn-trong-python)
-5. [Python: Hàm tự viết trong project](#5-python-hàm-tự-viết-trong-project)
-6. [Python: Giai đoạn 6 đến 10](#6-python-giai-đoạn-6-đến-10-)
-7. [JavaScript: Có sẵn trong trình duyệt](#7-javascript-có-sẵn-trong-trình-duyệt)
-8. [JavaScript: Hàm tự viết trong project](#8-javascript-hàm-tự-viết-trong-project)
-9. [Lệnh terminal](#9-lệnh-terminal)
+3. [Python: Migrations (Flask-Migrate, Alembic)](#3-python-migrations-flask-migrate-alembic)
+4. [Python: Built into Python](#4-python-built-into-python)
+5. [Python: Functions written in this project](#5-python-functions-written-in-this-project)
+6. [Python: Libraries from stage 6 on](#6-python-libraries-from-stage-6-on)
+7. [JavaScript: Built into the browser](#7-javascript-built-into-the-browser)
+8. [JavaScript: Functions written in this project](#8-javascript-functions-written-in-this-project)
+9. [Terminal commands](#9-terminal-commands)
 
 ---
 
 ## 1. Python: Flask
 
-### Tạo app và cấu hình
+### Creating the app and config
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `Flask(__name__)` **[GĐ 1]** | Tạo app. `__name__` giúp Flask tìm thư mục `templates/` và `static/` | `app = Flask(__name__)` |
-| `app.config[...]` **[GĐ 3]** | Đọc và ghi cấu hình của app | `app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///todo.db"` |
-| `app.config.update({...})` ⏳ GĐ 8 | Ghi nhiều cấu hình một lần | `app.config.update(test_config)` |
-| `app.instance_path` | Đường dẫn thư mục `instance/`, nơi chứa file database SQLite | |
+| `Flask(__name__)` **[Stage 1]** | Creates the app. `__name__` helps Flask find `templates/` and `static/` | `app = Flask(__name__)` |
+| `app.config[...]` **[Stage 3]** | Read and write the app's config | `app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///todo.db"` |
+| `app.config.update(...)` **[Stage 7]** | Write several config values at once | `app.config.update(SECRET_KEY=..., ...)`, `app.config.update(test_config)` |
+| `app.instance_path` | Path of the `instance/` folder, where the SQLite file lives | |
 
-### Route và Blueprint
+### Routes and Blueprints
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `Blueprint(tên, __name__)` **[GĐ 2]** | Tạo một nhóm route | `blueprint = Blueprint("api", __name__)` |
-| `app.register_blueprint(bp, url_prefix=...)` **[GĐ 2]** | Gắn Blueprint vào app. Quên dòng này thì vào URL bị 404 | `app.register_blueprint(api_blueprint, url_prefix="/api")` |
-| `@bp.route(path, methods=[...])` **[GĐ 1]** | Gắn URL với hàm. Mặc định chỉ nhận GET | `@blueprint.route("/", methods=["GET"])` |
-| `@bp.get` / `@bp.post` / `@bp.patch` / `@bp.put` / `@bp.delete` **[GĐ 4]** | Viết tắt của `route(..., methods=[...])` | `@blueprint.post("/lists")` |
-| `<int:id>` trong URL **[GĐ 4]** | Lấy một phần URL làm tham số, tự đổi sang số. Không phải số thì 404 | `@blueprint.patch("/tasks/<int:task_id>")` → hàm nhận `task_id` |
-| `@bp.before_request` ⏳ GĐ 6 | Chạy trước mọi route trong Blueprint. Dùng để bắt đăng nhập cho cả API | |
+| `Blueprint(name, __name__)` **[Stage 2]** | Creates a group of routes | `blueprint = Blueprint("api", __name__)` |
+| `app.register_blueprint(bp, url_prefix=...)` **[Stage 2]** | Attaches a Blueprint to the app. Forget it and the URLs 404 | `app.register_blueprint(api_blueprint, url_prefix="/api")` |
+| `@bp.route(path, methods=[...])` **[Stage 1]** | Links a URL to a function. Only GET by default | `@blueprint.route("/", methods=["GET"])` |
+| `@bp.get` / `@bp.post` / `@bp.patch` / `@bp.put` / `@bp.delete` **[Stage 4]** | Short for `route(..., methods=[...])` | `@blueprint.post("/lists")` |
+| `<int:id>` in the URL **[Stage 4]** | Takes part of the URL as a parameter, converted to a number. Not a number = 404 | `@blueprint.patch("/tasks/<int:task_id>")` → the function gets `task_id` |
+| `@bp.before_request` **[Stage 6]** | Runs before every route in the Blueprint. Used to require login for the whole API | `require_login()` in `api.py` |
+| `@bp.after_request` **[Extra]** | Runs after every route in the Blueprint and can change the response | `no_store()` in `auth.py` adds `Cache-Control` |
 
-### Đọc request
+### Reading the request
 
-| Thuộc tính | Làm gì | Ví dụ |
+| Attribute | What it does | Example |
 |---|---|---|
-| `request.get_json(silent=True)` **[GĐ 4]** | Đọc body JSON thành dict. `silent=True`: sai định dạng thì trả `None` thay vì báo lỗi | `data = request.get_json(silent=True)` |
-| `request.path` **[GĐ 4]** | Đường dẫn của request, ví dụ `/api/lists` | `if request.path.startswith("/api/"):` |
-| `request.form` ⏳ GĐ 6 | Dữ liệu từ form HTML (trang đăng nhập) | `request.form.get("username", "")` |
-| `request.args` | Tham số sau dấu `?` trong URL | `/tasks?done=true` → `request.args.get("done")` |
+| `request.get_json(silent=True)` **[Stage 4]** | Reads a JSON body into a dict. `silent=True`: returns `None` instead of raising if it's not valid | `data = request.get_json(silent=True)` |
+| `request.path` **[Stage 4]** | The request's path, e.g. `/api/lists` | `if request.path.startswith("/api/"):` |
+| `request.form` **[Stage 6]** | Data from an HTML form (login page) | `request.form.get("username", "")` |
+| `request.args` | Parameters after `?` in the URL | `/tasks?done=true` → `request.args.get("done")` |
+| `request.headers` **[Extra]** | Request headers | `request.headers.get("Authorization", "")` |
+| `request.method` / `request.endpoint` **[Stage 7]** | `"GET"`/`"POST"`... / the name of the matched route, e.g. `"auth.register"` | |
+| `request.remote_addr` **[Stage 7]** | The client's IP | `client_ip()` |
 
-### Trả response
+### Sending a response
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `render_template(file)` **[GĐ 2]** | Trả trang HTML từ `templates/`, có xử lý Jinja | `return render_template("index.html")` |
-| `url_for("static", filename=...)` **[GĐ 2]** | Tạo đường dẫn tới file tĩnh. Dùng trong HTML (Jinja) | `{{ url_for('static', filename='styles/base.css') }}` |
-| `url_for("tên_bp.tên_hàm")` ⏳ GĐ 6 | Tạo URL tới một route theo tên hàm | `url_for("auth.login")` → `/login` |
-| `jsonify(...)` **[GĐ 4]** | Đổi dict hoặc list thành response JSON | `return jsonify(task.to_dict())` |
-| `return body, mã` **[GĐ 4]** | Trả kèm mã trạng thái | `return jsonify(...), 201` / `return "", 204` |
-| `abort(mã, "lý do")` **[GĐ 4]** | Dừng route ngay, trả lỗi | `abort(400, "name must be a non-empty string")` |
-| `redirect(url)` ⏳ GĐ 6 | Chuyển hướng sang trang khác | `return redirect(url_for("pages.index"))` |
-| `flash("...")` ⏳ GĐ 6 | Lưu một thông báo để trang sau hiển thị | `flash("Wrong username or password")` |
-| `get_flashed_messages()` ⏳ GĐ 6 | Dùng trong Jinja để lấy thông báo đã `flash` | |
+| `render_template(file, **vars)` **[Stage 2]** | Returns an HTML page from `templates/`, run through Jinja | `return render_template("auth.html", mode="login")` |
+| `url_for("static", filename=...)` **[Stage 2]** | Path to a static file. Used in HTML (Jinja) | `{{ url_for('static', filename='styles/base.css') }}` |
+| `url_for("bp_name.function")` **[Stage 6]** | URL of a route by its function name | `url_for("auth.login")` → `/login` |
+| `url_for(..., _external=True)` **[Extra]** | Full URL with `http://domain`, for emails | verification link |
+| `jsonify(...)` **[Stage 4]** | Turns a dict or list into a JSON response | `return jsonify(task.to_dict())` |
+| `return body, code` **[Stage 4]** | Return with a status code | `return jsonify(...), 201` / `return "", 204` |
+| `abort(code, "reason")` **[Stage 4]** | Stops the route right away with an error | `abort(400, "name must be a non-empty string")` |
+| `redirect(url)` **[Stage 6]** | Sends the browser to another page | `return redirect(url_for("pages.index"))` |
+| `flash("...")` **[Stage 6]** | Saves a message for the next page to show | `flash("Wrong username or password")` |
+| `get_flashed_messages()` **[Stage 6]** | Used in Jinja to get the `flash`ed messages | |
+| `response.headers[...]` **[Extra]** | Set a response header | `response.headers["Cache-Control"] = "no-store"` |
 
-### Xử lý lỗi
+### Error handling
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `app.register_error_handler(mã, hàm)` **[GĐ 4]** | Hàm chạy khi có lỗi với mã đó. Đặt ở mức app thì bắt được cả URL không tồn tại | `app.register_error_handler(404, handle_error)` |
-| `@app.errorhandler(mã)` | Cách viết khác của dòng trên, dạng decorator | |
-| `error.code` / `error.description` **[GĐ 4]** | Mã lỗi và lý do của lỗi | `jsonify(error=error.description), error.code` |
+| `app.register_error_handler(code, fn)` **[Stage 4]** | Function that runs for that error code. On the app, so it also catches URLs that don't exist | `app.register_error_handler(404, handle_error)` |
+| `@bp.errorhandler(code)` **[Stage 7]** | Same, but only for routes in that Blueprint | `too_many_attempts()` for 429 in `auth.py` |
+| `error.code` / `error.description` **[Stage 4]** | The error's code and reason | `jsonify(error=error.description), error.code` |
 
-### Mã trạng thái HTTP dùng trong project
+### HTTP status codes used in the project
 
-| Mã | Nghĩa | Khi nào |
+| Code | Meaning | When |
 |---|---|---|
-| 200 | OK | GET, PATCH thành công |
-| 201 | Created | POST tạo mới thành công |
-| 204 | No Content | DELETE, PUT order thành công, không có gì để trả |
-| 400 | Bad Request | Dữ liệu gửi lên sai |
-| 401 | Unauthorized | Chưa đăng nhập ⏳ GĐ 6 |
-| 404 | Not Found | Không có list hay task đó, hoặc không phải của bạn |
-| 405 | Method Not Allowed | Gọi sai method, ví dụ DELETE `/api/lists` |
-| 429 | Too Many Requests | Đăng nhập sai quá nhiều lần ⏳ GĐ 7 |
-| 500 | Internal Server Error | Code server bị lỗi. Không bao giờ được để xảy ra vì dữ liệu sai |
+| 200 | OK | GET, PATCH worked |
+| 201 | Created | POST created something |
+| 204 | No Content | DELETE, PUT order, password change worked, nothing to return |
+| 400 | Bad Request | Bad data, wrong current password |
+| 401 | Unauthorized | Not logged in **[Stage 6]** |
+| 403 | Forbidden | Sign ups closed (`REGISTRATION_OPEN=0`) |
+| 404 | Not Found | No such list or task, or it's not yours. Also a wrong `REMINDER_TOKEN` |
+| 405 | Method Not Allowed | Wrong method, e.g. DELETE `/api/lists` |
+| 429 | Too Many Requests | Rate limited **[Stage 7]** |
+| 500 | Internal Server Error | The server code crashed. Should never happen because of bad input |
+| 502 | Bad Gateway | Brevo couldn't send the email **[Extra]** |
 
 ---
 
 ## 2. Python: Database (Flask-SQLAlchemy, SQLAlchemy)
 
-### Khởi tạo
+### Setup
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `SQLAlchemy(metadata=...)` **[GĐ 3]** | Tạo đối tượng `db` | `db = SQLAlchemy(metadata=MetaData(naming_convention=convention))` |
-| `MetaData(naming_convention=...)` **[GĐ 3]** | Quy tắc đặt tên constraint, để migration sửa hoặc xoá được | xem `extensions.py` |
-| `db.init_app(app)` **[GĐ 3]** | Gắn `db` vào app | |
-| `db.create_all()` ⏳ GĐ 8 | Tạo mọi bảng ngay, không qua migration. Chỉ dùng trong test | `with app.app_context(): db.create_all()` |
-| `app.app_context()` | Một số việc với `db` cần chạy "bên trong app", ví dụ trong test | `with app.app_context(): ...` |
+| `SQLAlchemy(metadata=...)` **[Stage 3]** | Creates the `db` object | `db = SQLAlchemy(metadata=MetaData(naming_convention=convention))` |
+| `MetaData(naming_convention=...)` **[Stage 3]** | Constraint naming rules, so migrations can change or drop them | see `extensions.py` |
+| `db.init_app(app)` **[Stage 3]** | Attaches `db` to the app | |
+| `db.create_all()` ⏳ Stage 8 | Creates every table right away, no migration. Only for tests | `with app.app_context(): db.create_all()` |
+| `app.app_context()` | Some `db` work has to run "inside the app", e.g. in tests | `with app.app_context(): ...` |
 
-### Khai báo bảng (model)
+### Declaring tables (models)
 
-| Thứ | Làm gì | Ví dụ |
+| Thing | What it does | Example |
 |---|---|---|
-| `class X(db.Model)` **[GĐ 3]** | Mỗi class là một bảng | `class Task(db.Model):` |
-| `__tablename__` **[GĐ 3]** | Tên bảng thật trong database | `__tablename__ = "tasks"` |
-| `db.Column(kiểu, ...)` **[GĐ 3]** | Một cột | `text = db.Column(db.String(500), nullable=False)` |
-| `db.Integer` / `db.String(n)` / `db.Boolean` / `db.Date` / `db.DateTime` | Kiểu dữ liệu của cột | |
-| `primary_key=True` | Khoá chính, database tự cấp số | |
-| `nullable=False` | Bắt buộc có giá trị | |
-| `default=...` | Giá trị mặc định khi không truyền | `default=False` |
-| `unique=True` ⏳ GĐ 6 | Không được trùng | `username` |
-| `index=True` | Tạo index để tìm nhanh hơn | `list_id` |
-| `db.ForeignKey("bảng.cột", ondelete="CASCADE")` **[GĐ 3]** | Khoá ngoại | `db.ForeignKey("lists.id", ondelete="CASCADE")` |
-| `db.relationship("Model", back_populates=..., cascade=..., order_by=...)` **[GĐ 3]** | Quan hệ giữa 2 bảng ở mức Python, ví dụ `todo_list.tasks`, `task.todo_list` | xem `models.py` |
+| `class X(db.Model)` **[Stage 3]** | Each class is a table | `class Task(db.Model):` |
+| `__tablename__` **[Stage 3]** | The real table name | `__tablename__ = "tasks"` |
+| `db.Column(type, ...)` **[Stage 3]** | A column | `text = db.Column(db.String(500), nullable=False)` |
+| `db.Integer` / `db.String(n)` / `db.Boolean` / `db.Date` / `db.DateTime` | Column types | |
+| `primary_key=True` | Primary key, the database assigns the number | |
+| `nullable=False` | Required | |
+| `default=...` | Default value when not given. A function (lambda) runs on every insert | `default=lambda: datetime.now(timezone.utc)` |
+| `unique=True` **[Stage 6]** | No duplicates | `username`, `email` |
+| `index=True` | Index for faster lookups | `list_id` |
+| `db.ForeignKey("table.column", ondelete="CASCADE")` **[Stage 3]** | Foreign key | `db.ForeignKey("lists.id", ondelete="CASCADE")` |
+| `db.relationship("Model", back_populates=..., cascade=..., order_by=...)` **[Stage 3]** | Relationship between 2 tables in Python, e.g. `todo_list.tasks`, `task.todo_list` | see `models.py` |
+| `UserMixin` **[Stage 6]** | Gives `User` what Flask-Login needs (`is_authenticated`, `get_id`...) | `class User(UserMixin, db.Model)` |
 
-### Đọc dữ liệu
+### Reading data
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `db.select(Model)` **[GĐ 4]** | Tạo câu truy vấn (chưa chạy) | `db.select(TodoList)` |
-| `.where(điều_kiện)` **[GĐ 4]** | Lọc bằng biểu thức | `.where(Task.list_id == 3)` |
-| `.filter_by(cột=giá_trị)` ⏳ GĐ 6 | Lọc kiểu viết tắt, so sánh bằng | `.filter_by(id=list_id, user_id=current_user.id)` |
-| `.order_by(cột)` **[GĐ 4]** | Sắp xếp | `.order_by(TodoList.id)` |
-| `.join(Model)` ⏳ GĐ 6 | Nối bảng | `db.select(Task).join(TodoList)` |
-| `.options(selectinload(Model.quan_hệ))` **[GĐ 4]** | Tải luôn dữ liệu quan hệ bằng 1 truy vấn thêm, tránh lỗi N+1 query | `.options(selectinload(TodoList.tasks))` |
-| `db.session.scalars(q).all()` **[GĐ 4]** | Chạy truy vấn, lấy danh sách object | `lists = db.session.scalars(query).all()` |
-| `db.session.scalars(q).first()` | Lấy object đầu tiên, không có thì `None` | |
-| `db.session.scalar(q)` **[GĐ 4]** | Chạy truy vấn trả về đúng 1 giá trị | `db.session.scalar(db.select(func.max(Task.position)))` |
-| `func.max(cột)` / `func.count(cột)` **[GĐ 4]** | Hàm SQL: lớn nhất, đếm | `from sqlalchemy import func` |
-| `db.session.get(Model, id)` ⏳ GĐ 6 | Tìm theo khoá chính, không có thì `None` | `db.session.get(User, int(user_id))` |
-| `db.get_or_404(Model, id, description=...)` **[GĐ 4]** | Tìm theo khoá chính, không có thì tự trả 404 | `db.get_or_404(Task, task_id, description="Task not found")` |
-| `db.first_or_404(q, description=...)` ⏳ GĐ 6 | Chạy truy vấn, không có kết quả thì 404 | `db.first_or_404(db.select(TodoList).filter_by(...))` |
+| `db.select(Model)` **[Stage 4]** | Builds a query (doesn't run it) | `db.select(TodoList)` |
+| `.where(condition)` **[Stage 4]** | Filter with an expression | `.where(Task.list_id == 3)` |
+| `.filter_by(column=value)` **[Stage 6]** | Shorter filter, equality only | `.filter_by(id=list_id, user_id=current_user.id)` |
+| `.order_by(column)` **[Stage 4]** | Sort | `.order_by(TodoList.id)` |
+| `.join(Model)` **[Stage 6]** | Join tables | `db.select(Task).join(TodoList)` |
+| `.is_(None)` / `.is_not(None)` / `.is_(False)` **[Extra]** | `IS NULL` / `IS NOT NULL` / `IS FALSE` in SQL | `User.email_verified_at.is_not(None)` |
+| `or_(a, b)` **[Extra]** | SQL `OR`. `from sqlalchemy import or_` | `or_(Task.reminded_for.is_(None), Task.reminded_for != Task.due_date)` |
+| `.options(selectinload(Model.relationship))` **[Stage 4]** | Loads related data with 1 extra query, avoids the N+1 query problem | `.options(selectinload(TodoList.tasks))` |
+| `db.session.scalars(q).all()` **[Stage 4]** | Runs the query, returns a list of objects | `lists = db.session.scalars(query).all()` |
+| `db.session.scalars(q).first()` | First object or `None` | |
+| `db.session.scalar(q)` **[Stage 4]** | Runs a query that returns one value | `db.session.scalar(db.select(func.max(Task.position)))` |
+| `func.max(col)` / `func.count(col)` **[Stage 4]** | SQL functions: max, count | `from sqlalchemy import func` |
+| `db.session.get(Model, id)` **[Stage 6]** | Find by primary key, `None` if not found | `db.session.get(User, int(user_id))` |
+| `db.get_or_404(Model, id, description=...)` **[Stage 4]** | Find by primary key, 404 if not found | |
+| `db.first_or_404(q, description=...)` **[Stage 6]** | Run a query, 404 if no result | `db.first_or_404(db.select(TodoList).filter_by(...))` |
 
-### Ghi dữ liệu
+### Writing data
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `db.session.add(obj)` **[GĐ 4]** | Đánh dấu object mới để lưu | `db.session.add(task)` |
-| `db.session.delete(obj)` **[GĐ 4]** | Đánh dấu object để xoá | `db.session.delete(todo_list)` |
-| Gán thuộc tính | Sửa dữ liệu, chỉ cần gán rồi commit | `task.text = "Mới"` |
-| `db.session.commit()` **[GĐ 4]** | Lưu thật vào database. Sau commit, object mới có `id` | |
-| `db.session.rollback()` ⏳ GĐ 6 | Huỷ các thay đổi chưa commit, dùng khi bị lỗi | sau khi bắt `IntegrityError` |
+| `db.session.add(obj)` **[Stage 4]** | Marks a new object to be saved | `db.session.add(task)` |
+| `db.session.delete(obj)` **[Stage 4]** | Marks an object to be deleted | `db.session.delete(todo_list)` |
+| Setting an attribute | Change data, just set it and commit | `task.text = "New"` |
+| `db.session.commit()` **[Stage 4]** | Actually saves to the database. After commit, a new object has its `id` | |
+| `db.session.rollback()` **[Stage 6]** | Undoes uncommitted changes, used after an error | after catching `IntegrityError` |
 
 ---
 
-## 3. Python: Migration (Flask-Migrate, Alembic)
+## 3. Python: Migrations (Flask-Migrate, Alembic)
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `Migrate(render_as_batch=True)` **[GĐ 3]** | Tạo `migrate`. Batch mode cần cho SQLite |
-| `migrate.init_app(app, db)` **[GĐ 3]** | Gắn vào app, để có lệnh `flask db ...` |
-| `op.create_table(...)` / `op.drop_table(...)` | Trong file migration: tạo và xoá bảng |
-| `op.batch_alter_table(...)` | Trong file migration: sửa bảng theo kiểu batch (SQLite) |
-| `upgrade()` / `downgrade()` | Hàm áp dụng / quay ngược thay đổi trong mỗi file migration |
+| `Migrate(render_as_batch=True)` **[Stage 3]** | Creates `migrate`. Batch mode is needed for SQLite |
+| `migrate.init_app(app, db)` **[Stage 3]** | Attaches it to the app, adds the `flask db ...` commands |
+| `op.create_table(...)` / `op.drop_table(...)` | In a migration file: create and drop tables |
+| `op.batch_alter_table(...)` | In a migration file: change a table in batch mode (SQLite) |
+| `batch_op.add_column(...)` / `create_unique_constraint(...)` | Add a column / a unique constraint |
+| `upgrade()` / `downgrade()` | Apply / undo the change in each migration file |
 
-Lệnh xem ở [mục 9](#9-lệnh-terminal).
+Commands are in [section 9](#9-terminal-commands).
 
 ---
 
-## 4. Python: Có sẵn trong Python
+## 4. Python: Built into Python
 
-| Hàm | Làm gì | Ví dụ trong project |
+| Function | What it does | Example in the project |
 |---|---|---|
-| `isinstance(x, kiểu)` **[GĐ 4]** | Kiểm tra kiểu dữ liệu | `isinstance(value, str)` |
-| `str.strip()` **[GĐ 4]** | Bỏ khoảng trắng hai đầu | `"  Work ".strip()` → `"Work"` |
-| `str.lower()` | Đổi sang chữ thường | `value.lower()` |
-| `str.startswith(...)` **[GĐ 4]** | Kiểm tra chuỗi bắt đầu bằng gì | `request.path.startswith("/api/")` |
-| `len(x)` | Độ dài | `len(value) > 100` |
-| `re.compile(mẫu)` / `.match(chuỗi)` **[GĐ 4]** | Biểu thức chính quy (regex) | `COLOR_PATTERN.match("#e74c3c")` |
-| `date.fromisoformat(s)` **[GĐ 4]** | Chuỗi `"2026-11-07"` → `date` | `from datetime import date` |
-| `date.isoformat()` **[GĐ 3]** | `date` → chuỗi `"2026-11-07"` | trong `to_dict()` |
-| `enumerate(list)` **[GĐ 4]** | Duyệt kèm vị trí | `for position, task in enumerate(ordered):` |
-| `all(...)` **[GĐ 4]** | `True` nếu mọi phần tử đều đúng | `all(isinstance(i, int) for i in task_ids)` |
-| `set()` / `.add()` / `in` **[GĐ 4]** | Tập hợp, kiểm tra "đã có chưa" rất nhanh | `seen = set()` |
-| Dict comprehension | Tạo dict ngắn gọn | `{task.id: task for task in todo_list.tasks}` |
-| List comprehension | Tạo list ngắn gọn | `[t.to_dict() for t in self.tasks]` |
-| f-string | Chèn biến vào chuỗi | `f"{field} must be a non-empty string"` |
-| `try / except (A, B):` **[GĐ 4]** | Bắt lỗi | `except (TypeError, ValueError):` |
-| `os.environ.get("TÊN")` ⏳ GĐ 7 | Đọc biến môi trường | `os.environ.get("SECRET_KEY")` |
-| `secrets.token_hex(32)` ⏳ GĐ 7 | Tạo chuỗi ngẫu nhiên an toàn | dùng tạo `SECRET_KEY` |
-| `raise RuntimeError("...")` ⏳ GĐ 7 | Tự báo lỗi, dừng chương trình | thiếu `SECRET_KEY` |
+| `isinstance(x, type)` **[Stage 4]** | Check a value's type | `isinstance(value, str)` |
+| `str.strip()` **[Stage 4]** | Remove spaces at both ends | `"  Work ".strip()` → `"Work"` |
+| `str.lower()` | Lowercase | `value.lower()` |
+| `str.startswith(...)` **[Stage 4]** | Check how a string starts | `request.path.startswith("/api/")` |
+| `len(x)` | Length | `len(value) > 100` |
+| `re.compile(pattern)` / `.match(string)` **[Stage 4]** | Regular expressions | `COLOR_PATTERN.match("#e74c3c")` |
+| `date.fromisoformat(s)` **[Stage 4]** | `"2026-11-07"` → `date` | `from datetime import date` |
+| `date.isoformat()` **[Stage 3]** | `date` → `"2026-11-07"` | in `to_dict()` |
+| `enumerate(list)` **[Stage 4]** | Loop with the index | `for position, task in enumerate(ordered):` |
+| `all(...)` **[Stage 4]** | `True` if every item is true | `all(isinstance(i, int) for i in task_ids)` |
+| `set()` / `.add()` / `in` **[Stage 4]** | A set, very fast "seen this already?" | `seen = set()` |
+| Dict comprehension | Build a dict in one line | `{task.id: task for task in todo_list.tasks}` |
+| List comprehension | Build a list in one line | `[t.to_dict() for t in self.tasks]` |
+| f-string | Put variables in a string | `f"{field} must be a non-empty string"` |
+| `f"{date:%b %d}"` **[Extra]** | Format a date in an f-string | `"Nov 10"` |
+| `try / except (A, B):` **[Stage 4]** | Catch errors | `except (TypeError, ValueError):` |
+| `try / except / else` **[Stage 6]** | `else` runs only if nothing was raised | sign up: commit, else log in |
+| `os.environ.get("NAME")` **[Stage 7]** | Read an environment variable | `os.environ.get("SECRET_KEY")` |
+| `secrets.token_hex(32)` **[Stage 7]** | Secure random string | making `SECRET_KEY`, `REMINDER_TOKEN` |
+| `raise RuntimeError("...")` **[Stage 7]** | Raise an error and stop | missing `SECRET_KEY` |
+| `@property` **[Extra]** | Turns a method into an attribute, no `()` needed | `user.shown_name` |
+| `datetime.now(timezone.utc)` **[Stage 6]** | Now, in UTC | `created_at`, `send_due_reminders()` |
+| `timedelta(days=1)` **[Extra]** | A length of time, add or subtract it from dates | `now + timedelta(days=1)` → tomorrow |
+| `dt.astimezone(zone)` **[Extra]** | Convert a datetime to another timezone | each user's local time |
+| `ZoneInfo("America/Toronto")` **[Extra]** | A timezone by name. Bad name = `ZoneInfoNotFoundError`. Windows needs `tzdata` | `from zoneinfo import ZoneInfo` |
+| `hmac.compare_digest(a, b)` **[Extra]** | Compare 2 byte strings in constant time, so a token can't be guessed by timing | checking `REMINDER_TOKEN` |
+| `urllib.request.Request(...)` / `urlopen(req, timeout=10)` **[Extra]** | Send an HTTP request without installing anything | sending email through Brevo |
+| `json.dumps(obj).encode()` **[Extra]** | Dict → JSON string → bytes to send | the body sent to Brevo |
 
 ---
 
-## 5. Python: Hàm tự viết trong project
+## 5. Python: Functions written in this project
 
 ### `wsgi.py`, `app/__init__.py`
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `create_app()` **[GĐ 1]** | Tạo app, cấu hình, gắn extension, đăng ký Blueprint, trả về app |
-| `app = create_app()` trong `wsgi.py` | Điểm vào: tạo app thật để `flask run` hoặc `gunicorn wsgi:app` chạy |
+| `create_app(test_config=None)` **[Stage 1]** | Creates the app, config, extensions, Blueprints, returns the app. `test_config` overrides settings for tests |
+| `env_flag(name, default)` **[Stage 7]** | Reads an on/off environment variable (`"1"`, `"true"`, `"yes"`, `"on"` = on) |
+| `load_user(user_id)` **[Stage 6]** | Flask-Login calls it every request: id from the cookie → `User` |
+| `unauthorized()` **[Stage 6]** | Not logged in: `/api/...` → 401 JSON, other pages → redirect to `/login` |
+| `app = create_app()` in `wsgi.py` | Entry point: makes the real app for `flask run` or `gunicorn wsgi:app` |
 
-### `app/models.py` **[GĐ 3]**
+### `app/extensions.py`
 
-| Hàm | Làm gì |
+| Thing | What it does |
 |---|---|
-| `TodoList.to_dict()` | Đổi list (kèm mọi task) thành dict để trả JSON |
-| `Task.to_dict()` | Đổi task thành dict. Đổi `due_date` thành chuỗi, tên khoá là `dueDate` cho khớp với JS |
+| `db`, `migrate`, `login_manager`, `csrf`, `limiter` | The extensions, created here and attached in `create_app()` |
+| `client_ip()` **[Stage 7]** | The client's IP, used as the default rate limit key |
 
-### `app/pages.py` **[GĐ 2]**
+### `app/models.py` **[Stage 3]**
 
-| Hàm | URL | Làm gì |
+| Function | What it does |
+|---|---|
+| `TodoList.to_dict()` | List (with all its tasks) → dict for JSON |
+| `Task.to_dict()` | Task → dict. `due_date` becomes a string, key named `dueDate` to match the JS |
+| `User.shown_name` **[Extra]** | `display_name` if set, otherwise `username`. Used in the sidebar and email greetings |
+| `User.to_dict()` **[Extra]** | Info for the account panel: `username`, `displayName`, `email`, `emailVerified`, `timezone`, `createdAt`. **No `password_hash`** |
+
+### `app/pages.py` **[Stage 2]**
+
+| Function | URL | What it does |
 |---|---|---|
-| `index()` | `GET /` | Trả `index.html` |
+| `index()` | `GET /` | Returns `index.html`. Needs login |
 
-### `app/api.py` **[GĐ 4]**
+### `app/api.py` **[Stage 4]**
 
-Kiểm tra dữ liệu (sai thì `abort(400)`):
+Checking data (`abort(400)` if wrong):
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `get_json_body()` | Đọc body JSON. Không phải object `{...}` thì 400 |
-| `validate_text(value, field, max_length)` | Chuỗi, không rỗng sau `strip()`, không quá độ dài. Trả về chuỗi đã `strip()` |
-| `validate_color(value)` | `None` hoặc `#rrggbb`. Trả về chữ thường |
-| `validate_due_date(value)` | `None` hoặc `"YYYY-MM-DD"`. Trả về `date` |
-| `validate_completed(value)` | Phải là `True`/`False` thật |
+| `get_json_body()` | Reads the JSON body. Not an object `{...}` → 400 |
+| `validate_text(value, field, max_length)` | String, not empty after `strip()`, not too long. Returns the stripped string |
+| `validate_color(value)` | `None` or `#rrggbb`. Returns it lowercase |
+| `validate_due_date(value)` | `None` or `"YYYY-MM-DD"`. Returns a `date` |
+| `validate_completed(value)` | Must be a real `True`/`False` |
 
-Tìm dữ liệu (không có thì 404). Giai đoạn 6 thêm điều kiện người dùng ở đây:
+Finding data (404 if not found, or not yours):
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `get_list_or_404(list_id)` | Tìm list theo id |
-| `get_task_or_404(task_id)` | Tìm task theo id |
+| `require_login()` **[Stage 6]** | `before_request` on the API: every route needs login |
+| `get_list_or_404(list_id)` | Finds a list **owned by the current user** |
+| `get_task_or_404(task_id)` | Finds a task whose list is owned by the current user (join through `TodoList`) |
 
-Route:
+Routes:
 
-| Hàm | Method + URL | Thành công |
+| Function | Method + URL | Success |
 |---|---|---|
-| `get_lists()` | `GET /api/lists` | 200, mảng list kèm task |
-| `create_list()` | `POST /api/lists` `{name}` | 201, list mới |
-| `update_list(list_id)` | `PATCH /api/lists/<id>` `{name}` | 200, list đã sửa |
+| `get_lists()` | `GET /api/lists` | 200, the user's lists with tasks |
+| `create_list()` | `POST /api/lists` `{name}` | 201, the new list |
+| `update_list(list_id)` | `PATCH /api/lists/<id>` `{name}` | 200, the updated list |
 | `delete_list(list_id)` | `DELETE /api/lists/<id>` | 204 |
-| `create_task(list_id)` | `POST /api/lists/<id>/tasks` `{text, color, dueDate}` | 201, task mới |
+| `create_task(list_id)` | `POST /api/lists/<id>/tasks` `{text, color, dueDate}` | 201, the new task |
 | `reorder_tasks(list_id)` | `PUT /api/lists/<id>/order` `{taskIds: [...]}` | 204 |
-| `update_task(task_id)` | `PATCH /api/tasks/<id>` (chỉ trường có gửi) | 200, task đã sửa |
+| `update_task(task_id)` | `PATCH /api/tasks/<id>` (only the fields sent) | 200, the updated task |
 | `delete_task(task_id)` | `DELETE /api/tasks/<id>` | 204 |
+| `get_account()` **[Extra]** | `GET /api/account` | 200, account info |
+| `update_account()` **[Extra]** | `PATCH /api/account` `{displayName, timezone}` | 200 |
+| `set_email()` **[Extra]** | `PUT /api/account/email` `{email}` | 200, sends a verification link if the email is new |
+| `resend_verification()` **[Extra]** | `POST /api/account/email/resend` | 204 |
+| `change_password()` **[Extra]** | `POST /api/account/password` `{currentPassword, newPassword}` | 204. Wrong current password = **400** (not 401) |
 
-Lỗi:
+Account helpers **[Extra]**:
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `register_error_handlers(app)` | URL `/api/...` bị lỗi 400/404/405 thì trả JSON `{"error": "..."}`, trang thường giữ trang lỗi HTML |
+| `password_change_key()` / `email_key()` | Rate limit keys: per user, or per IP if nobody's logged in |
+| `email_limit` | `limiter.shared_limit(...)`: the 2 email routes share 5 / hour |
+| `try_send_verification()` | Sends the verification link. On failure, logs it and returns a message instead of breaking the request |
+
+Errors:
+
+| Function | What it does |
+|---|---|
+| `register_error_handlers(app)` | `/api/...` errors 400/404/405/429/502 return JSON `{"error": "..."}`, normal pages keep the HTML error page |
+
+### `app/auth.py` **[Stage 6]**
+
+| Function | URL | What it does |
+|---|---|---|
+| `register()` | `GET/POST /register` | Sign up. Rate limit 10 / hour / IP |
+| `login()` | `GET/POST /login` | Log in. Rate limit 10 / minute / username and 30 / minute / IP |
+| `logout()` | `POST /logout` | Log out. POST only |
+| `verify_email(token)` **[Extra]** | `GET /verify-email/<token>` | The link in the verification email. No login needed |
+| `read_form()` | | Reads the username (lowercased) and password from the form |
+| `username_key()` **[Stage 7]** | | Rate limit key by username |
+| `too_many_attempts(error)` **[Stage 7]** | | 429 shows on the form instead of a blank error page |
+| `no_store(response)` **[Extra]** | | `Cache-Control: no-store`: Back doesn't show an old login page |
+| `already_logged_in(mode)` **[Extra]** | | Logged in and opened/submitted the form: GET → main page, POST → "already logged in" message |
+
+### `app/mailer.py` **[Extra]**
+
+| Function | What it does |
+|---|---|
+| `send_email(to, subject, text)` | Sends through Brevo. No `BREVO_API_KEY` → prints it in the terminal |
+| `make_verify_token(user)` / `read_verify_token(token)` | Make / read a token signed with `SECRET_KEY`. Reading returns `None` if it's fake or older than 24 hours |
+| `send_verification_email(user)` | Sends the email with the `/verify-email/<token>` link |
+
+### `app/reminders.py` **[Extra]**
+
+| Function | What it does |
+|---|---|
+| `user_zone(user)` | The user's timezone, UTC if missing or invalid |
+| `send_due_reminders(now=None)` | Emails unfinished tasks due tomorrow, returns how many emails were sent. `now` lets tests use a fake time |
+| `send_reminders_route()` | `POST /internal/send-reminders`, needs `Authorization: Bearer <REMINDER_TOKEN>`, otherwise 404 |
+| `send_reminders_command()` | The `flask send-reminders` command |
 
 ---
 
-## 6. Python: Giai đoạn 6 đến 10 ⏳
+## 6. Python: Libraries from stage 6 on
 
-### Đăng nhập: Flask-Login **[GĐ 6]**
+### Logging in: Flask-Login **[Stage 6]**
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `LoginManager()` / `login_manager.init_app(app)` | Tạo và gắn bộ quản lý đăng nhập |
-| `UserMixin` | Cho class `User` kế thừa, có sẵn các thuộc tính Flask-Login cần |
-| `@login_manager.user_loader` | Hàm nhận id từ session, trả về `User`. Flask-Login gọi ở mỗi request |
-| `@login_manager.unauthorized_handler` | Chạy khi chưa đăng nhập mà vào trang cần đăng nhập |
-| `login_user(user, remember=True)` | Đăng nhập: lưu id vào session cookie |
-| `logout_user()` | Đăng xuất |
-| `@login_required` | Đặt trên route, bắt buộc đăng nhập |
-| `current_user` | Người dùng của request hiện tại. `current_user.id`, `current_user.is_authenticated` |
+| `LoginManager()` / `login_manager.init_app(app)` | Creates and attaches the login manager |
+| `UserMixin` | `User` inherits from it to get what Flask-Login needs |
+| `@login_manager.user_loader` | Function that takes the id from the session and returns a `User`. Called every request |
+| `@login_manager.unauthorized_handler` | Runs when someone not logged in opens a page that needs login |
+| `login_user(user, remember=True)` | Log in: puts the id in the session cookie |
+| `logout_user()` | Log out |
+| `@login_required` | On a route: login required |
+| `current_user` | This request's user. `current_user.id`, `current_user.is_authenticated` |
 
-### Mật khẩu và lỗi database **[GĐ 6]**
+### Passwords and database errors **[Stage 6]**
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `generate_password_hash(pw)` | Băm mật khẩu để lưu. Không bao giờ lưu mật khẩu gốc. `from werkzeug.security import ...` |
-| `check_password_hash(hash, pw)` | So mật khẩu nhập vào với bản đã băm |
-| `IntegrityError` | Lỗi khi vi phạm ràng buộc, ví dụ trùng username. `from sqlalchemy.exc import IntegrityError` |
+| `generate_password_hash(pw)` | Hashes a password to store it. Never store the real one. `from werkzeug.security import ...` |
+| `check_password_hash(hash, pw)` | Checks a typed password against the stored hash |
+| `IntegrityError` | Raised when a constraint is broken, e.g. duplicate username or email. `from sqlalchemy.exc import IntegrityError` |
 
-### Cấu hình và bảo mật **[GĐ 7]**
+### Config and security **[Stage 7]**
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `load_dotenv()` | Đọc file `.env` vào biến môi trường. `from dotenv import load_dotenv` |
-| `CSRFProtect()` / `csrf.init_app(app)` | Bật chống CSRF cho mọi request POST/PATCH/PUT/DELETE. `from flask_wtf.csrf import CSRFProtect` |
-| `{{ csrf_token() }}` | Trong HTML (Jinja): tạo token CSRF cho form hoặc thẻ `<meta>` |
-| `Limiter(key_func=get_remote_address)` / `limiter.init_app(app)` | Bộ giới hạn số request. `from flask_limiter import Limiter` |
-| `@limiter.limit("10 per minute", methods=["POST"], key_func=...)` | Giới hạn một route |
+| `load_dotenv()` | Reads `.env` into environment variables. `from dotenv import load_dotenv` |
+| `CSRFProtect()` / `csrf.init_app(app)` | CSRF protection for every POST/PATCH/PUT/DELETE. `from flask_wtf.csrf import CSRFProtect` |
+| `{{ csrf_token() }}` | In HTML (Jinja): makes a CSRF token for a form or a `<meta>` tag |
+| `csrf.exempt(blueprint)` **[Extra]** | Turns CSRF off for a Blueprint. Only when it's protected another way (a token in a header) |
+| `Limiter(key_func=client_ip)` / `limiter.init_app(app)` | The rate limiter. `from flask_limiter import Limiter` |
+| `@limiter.limit("10 per minute", methods=["POST"], key_func=...)` | Limits one route |
+| `@limiter.limit(..., error_message="...")` **[Extra]** | The message when blocked, instead of `10 per 1 hour` |
+| `limiter.shared_limit("5 per hour", scope="...")` **[Extra]** | Several routes share one counter |
 
-### Test: pytest **[GĐ 8]**
+### Signed tokens, CLI commands **[Extra]**
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `@pytest.fixture` | Hàm chuẩn bị dữ liệu dùng chung cho test, ví dụ tạo app, tạo client |
-| `tmp_path` | Fixture có sẵn của pytest: một thư mục tạm cho mỗi test |
-| `app.test_client()` | Client giả để gửi request mà không cần chạy server |
-| `client.get(url)` / `client.post(url, json={...})` / `.patch` / `.delete` | Gửi request thử |
-| `response.status_code` / `response.get_json()` | Đọc kết quả |
-| `assert điều_kiện` | Kiểm tra. Sai thì test đỏ |
+| `URLSafeTimedSerializer(key, salt=...)` | `.dumps(data)` makes a signed string safe for URLs. `.loads(token, max_age=seconds)` reads it, raises if it's fake or expired. `from itsdangerous import ...` |
+| `SignatureExpired` / `BadSignature` | The errors `.loads` raises |
+| `Blueprint(..., cli_group=None)` + `@bp.cli.command("name")` | Adds a `flask name` command |
+| `click.echo(...)` | Prints in a `flask ...` command |
+| `current_app.logger.warning(...)` / `.exception(...)` | Write to the server log. `.exception` includes the traceback |
 
-### Database thật và deploy **[GĐ 9, 10]**
+### Tests: pytest ⏳ Stage 8
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}` | Kiểm tra kết nối trước khi dùng, vì Neon tắt database khi rảnh |
-| `ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)` | Cho Flask biết request thật là HTTPS khi chạy sau proxy của Render. `from werkzeug.middleware.proxy_fix import ProxyFix` |
+| `@pytest.fixture` | Shared setup for tests, e.g. make the app, make a client |
+| `tmp_path` | Built-in fixture: a temporary folder per test |
+| `app.test_client()` | A fake client to send requests without running a server |
+| `client.get(url)` / `client.post(url, json={...})` / `.patch` / `.delete` | Send a test request |
+| `response.status_code` / `response.get_json()` | Read the result |
+| `assert condition` | Check. False = the test fails |
+
+### Real database and deploy ⏳ Stages 9, 10
+
+| Thing | What it does |
+|---|---|
+| `SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}` | Checks the connection before using it, because Neon shuts down when idle |
+| `ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)` | Tells Flask the real request was HTTPS when running behind Render's proxy. `from werkzeug.middleware.proxy_fix import ProxyFix` |
 
 ---
 
-## 7. JavaScript: Có sẵn trong trình duyệt
+## 7. JavaScript: Built into the browser
 
-### Tìm và tạo phần tử HTML (DOM)
+### Finding and creating HTML elements (DOM)
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `document.getElementById(id)` | Tìm phần tử theo id | `document.getElementById("taskInput")` |
-| `document.querySelector(css)` | Tìm phần tử đầu tiên khớp selector CSS | `document.querySelector(".main")` |
-| `document.querySelectorAll(css)` | Tìm mọi phần tử khớp, trả về `NodeList` | `tasksList.querySelectorAll("li:not(.dragging)")` |
-| `document.createElement(tag)` | Tạo phần tử mới (chưa hiện) | `document.createElement("li")` |
-| `parent.appendChild(el)` / `parent.append(a, b, ...)` | Thêm vào cuối phần tử cha | `li.append(checkBox, text)` |
-| `parent.insertBefore(el, ref)` | Chèn trước `ref`. `ref` là `null` thì chèn cuối | dùng khi kéo thả |
-| `el.replaceWith(other)` | Thay phần tử này bằng phần tử khác | đổi tên list: `span` → `input` |
-| `el.innerHTML = ""` | Xoá hết nội dung bên trong | trước khi vẽ lại |
-| `el.textContent = "..."` | Đặt chữ (an toàn, không chạy HTML) | `span.textContent = task.text` |
-| `el.dataset.id` | Đọc/ghi thuộc tính `data-id` trong HTML. **Luôn là chuỗi** | `li.dataset.id = String(task.id)` |
-| `el.children` | Các phần tử con trực tiếp | `[...tasksList.children]` |
-| `el.focus()` / `input.select()` | Đặt con trỏ vào ô / bôi đen chữ trong ô | |
-| `el.getBoundingClientRect()` | Vị trí và kích thước trên màn hình | đặt popup, kéo thả |
+| `document.getElementById(id)` | Find an element by id | `document.getElementById("taskInput")` |
+| `document.querySelector(css)` | First element matching a CSS selector | `document.querySelector(".main")` |
+| `document.querySelectorAll(css)` | Every match, returns a `NodeList` | `tasksList.querySelectorAll("li:not(.dragging)")` |
+| `document.createElement(tag)` | Create a new element (not shown yet) | `document.createElement("li")` |
+| `parent.appendChild(el)` / `parent.append(a, b, ...)` | Add to the end of a parent | `li.append(checkBox, text)` |
+| `parent.insertBefore(el, ref)` | Insert before `ref`. `ref` = `null` inserts at the end | drag and drop |
+| `el.replaceWith(other)` | Replace this element with another | renaming a list: `span` → `input` |
+| `el.innerHTML = ""` | Clear everything inside | before redrawing |
+| `el.textContent = "..."` | Set text (safe, no HTML runs) | `span.textContent = task.text` |
+| `el.dataset.id` | Read/write the `data-id` attribute. **Always a string** | `li.dataset.id = String(task.id)` |
+| `el.children` | Direct child elements | `[...tasksList.children]` |
+| `el.closest(css)` **[Extra]** | The element itself or its nearest parent matching the selector, or `null` | `e.target.closest("input")` |
+| `el.hidden = true` **[Extra]** | Hide an element (like `display: none`) | `toastYes.hidden = true` |
+| `el.focus()` / `input.select()` | Put the cursor in an input / select its text | |
+| `el.getBoundingClientRect()` | Position and size on screen | placing popups, drag and drop |
+| `Object.assign(node, props)` **[Extra]** | Copy every property of `props` onto `node` | `el()` in `account.js` |
+| `form.reset()` **[Extra]** | Clear every field in a form | after changing the password |
 
-### Class và style
+### Classes and styles
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `el.classList.add/remove(tên)` | Thêm / bỏ class | `li.classList.add("dragging")` |
-| `el.classList.toggle(tên)` | Có thì bỏ, chưa có thì thêm | `menu.classList.toggle("open")` |
-| `el.classList.toggle(tên, điều_kiện)` | `true` thì thêm, `false` thì bỏ | `btn.classList.toggle("empty", !pendingColor)` |
-| `el.classList.contains(tên)` | Có class đó không | `body.classList.contains("dark")` |
-| `el.style.display = "none"` | Đặt CSS trực tiếp. Gán `""` để bỏ | |
-| `el.style.setProperty("--biến", giá_trị)` | Đặt biến CSS | `li.style.setProperty("--task-color", task.color)` |
+| `el.classList.add/remove(name)` | Add / remove a class | `li.classList.add("dragging")` |
+| `el.classList.toggle(name)` | Remove if there, add if not | `menu.classList.toggle("open")` |
+| `el.classList.toggle(name, condition)` | `true` adds, `false` removes | `btn.classList.toggle("empty", !pendingColor)` |
+| `el.classList.contains(name)` | Has that class? | `body.classList.contains("dark")` |
+| `el.style.display = "none"` | Set CSS directly. `""` removes it | |
+| `el.style.setProperty("--var", value)` | Set a CSS variable | `li.style.setProperty("--task-color", task.color)` |
 
-### Sự kiện
+### Events
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `el.addEventListener(sự_kiện, hàm)` | Chạy hàm khi sự kiện xảy ra |
-| `e.stopPropagation()` | Không cho sự kiện nổi lên phần tử cha (xem giải thích "bubbling") |
-| `e.preventDefault()` | Chặn hành vi mặc định của trình duyệt. Bắt buộc trong `dragover` |
-| `e.key` | Phím vừa bấm: `"Enter"`, `"Escape"` |
-| `e.clientY` | Vị trí chuột theo chiều dọc |
+| `el.addEventListener(event, fn)` | Run `fn` when the event happens |
+| `e.stopPropagation()` | Don't let the event bubble up to parent elements |
+| `e.preventDefault()` | Stop the browser's default behavior. Required in `dragover`, and on form `submit` so the page doesn't reload |
+| `e.key` | The key pressed: `"Enter"`, `"Escape"` |
+| `e.clientY` | Mouse position, vertical |
+| `e.target` | The element the event happened on |
 
-Các sự kiện dùng trong project:
+Events used in the project:
 
-| Sự kiện | Khi nào |
+| Event | When |
 |---|---|
-| `click` | Bấm chuột |
-| `change` | Giá trị ô nhập, checkbox, radio thay đổi |
-| `keydown` | Bấm phím |
-| `blur` | Ô nhập mất con trỏ (bấm ra ngoài) |
-| `dragstart` / `dragover` / `dragend` | Bắt đầu kéo / đang kéo ngang qua / thả ra |
-| `scroll` / `resize` | Cuộn trang / đổi kích thước cửa sổ |
-| `visibilitychange` ⏳ GĐ 5 | Chuyển sang tab khác hoặc quay lại. `document.visibilityState` là `"visible"` hoặc `"hidden"` |
+| `click` | Mouse click |
+| `change` | An input, checkbox or radio value changed |
+| `keydown` | Key pressed |
+| `blur` | An input lost focus (clicked away) |
+| `submit` **[Extra]** | A form was sent (button or Enter) |
+| `dragstart` / `dragover` / `dragend` | Start dragging / dragging over / dropped |
+| `scroll` / `resize` | Page scrolled / window resized |
+| `visibilitychange` **[Stage 5]** | Switched to another tab or back. `document.visibilityState` is `"visible"` or `"hidden"` |
+| `popstate` **[Extra]** | Back / Forward pressed |
 
-### Mảng
+### Arrays
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `arr.find(fn)` | Phần tử đầu tiên thoả điều kiện, không có thì `undefined` | `lists.find(l => l.id === id)` |
-| `arr.filter(fn)` | Mảng mới gồm các phần tử thoả điều kiện | `tasks.filter(t => !t.completed)` |
-| `arr.map(fn)` | Mảng mới, mỗi phần tử được biến đổi | `tasks.map(t => t.id)` |
-| `arr.some(fn)` | `true` nếu có ít nhất 1 phần tử thoả | kiểm tra task trùng |
-| `arr.forEach(fn)` | Duyệt từng phần tử, `(phần_tử, vị_trí)` | `tasks.forEach((t, i) => ...)` |
-| `arr.includes(x)` | Có chứa `x` không | `visibleIds.includes(id)` |
-| `arr.push(x)` | Thêm vào cuối (sửa mảng gốc) | `getTasks().push(task)` |
-| `arr.sort(fn)` | Sắp xếp (sửa mảng gốc) | `withDate.sort((a, b) => ...)` |
-| `arr.indexOf(x)` | Vị trí của `x`, không có thì `-1` | thứ tự màu |
-| `[...a, ...b]` | Spread: ghép mảng, hoặc đổi `NodeList` thành mảng | `[...withDate, ...withoutDate]` |
+| `arr.find(fn)` | First item that matches, or `undefined` | `lists.find(l => l.id === id)` |
+| `arr.filter(fn)` | New array with the matching items | `tasks.filter(t => !t.completed)` |
+| `arr.map(fn)` | New array, every item transformed | `tasks.map(t => t.id)` |
+| `arr.some(fn)` | `true` if at least 1 item matches | duplicate task check |
+| `arr.forEach(fn)` | Loop over each item, `(item, index)` | `tasks.forEach((t, i) => ...)` |
+| `arr.includes(x)` | Contains `x`? | `visibleIds.includes(id)` |
+| `arr.push(x)` | Add to the end (changes the array) | `list.tasks.push(task)` |
+| `arr.sort(fn)` | Sort (changes the array) | `withDate.sort((a, b) => ...)` |
+| `arr.indexOf(x)` | Position of `x`, or `-1` | color order |
+| `[...a, ...b]` | Spread: join arrays, or turn a `NodeList` into an array | `[...withDate, ...withoutDate]` |
 
-### Object, chuỗi, số
+### Objects, strings, numbers
 
-| Hàm | Làm gì | Ví dụ |
+| Function | What it does | Example |
 |---|---|---|
-| `Object.assign(đích, nguồn)` | Chép các trường của `nguồn` vào `đích` | `Object.assign(task, { completed: true })` |
-| `str.trim()` | Bỏ khoảng trắng hai đầu | |
-| `str.toLowerCase()` | Chữ thường | so task trùng |
-| `str.split("-")` | Tách chuỗi thành mảng | `"2026-11-07".split("-")` |
-| `str.localeCompare(other)` | So sánh 2 chuỗi để sắp xếp | sắp theo ngày |
-| `` `...${biến}...` `` | Template literal: chèn biến vào chuỗi | `` `/api/tasks/${id}` `` |
-| `Number(x)` / `String(x)` | Đổi kiểu | `String(t.id) === el.dataset.id` |
-| `new Date(y, m - 1, d)` / `.toLocaleDateString(...)` | Tạo ngày (tháng tính từ 0) / hiển thị ngày | `formatTaskDate` |
-| `Date.now()` | Số mili giây hiện tại. Từ GĐ 5 không dùng làm id nữa | |
+| `Object.assign(target, source)` | Copy `source`'s fields onto `target` | `Object.assign(task, { completed: true })` |
+| `str.trim()` | Remove spaces at both ends | |
+| `str.toLowerCase()` | Lowercase | duplicate task check |
+| `str.split("-")` | Split a string into an array | `"2026-11-07".split("-")` |
+| `str.localeCompare(other)` | Compare 2 strings for sorting | sorting by date |
+| `` `...${var}...` `` | Template literal: put variables in a string. **Only with backticks**, not `"..."` | `` `/api/tasks/${id}` `` |
+| `Number(x)` / `String(x)` | Convert type | `String(t.id) === el.dataset.id` |
+| `new Date(y, m - 1, d)` / `.toLocaleDateString(...)` | Make a date (months start at 0) / show a date | `formatTaskDate` |
+| `Date.now()` | Current time in milliseconds. Not used as an id since stage 5 | |
+| `Intl.DateTimeFormat().resolvedOptions().timeZone` **[Extra]** | The device's timezone, e.g. `"America/Toronto"` | `syncTimezone()` |
 
-### Lưu trữ và JSON
+### Storage and JSON
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `localStorage.getItem(key)` / `setItem(key, value)` / `removeItem(key)` | Lưu trong trình duyệt, **chỉ lưu chuỗi**. Từ GĐ 5 chỉ dùng cho `theme`, `sortOrder`, `currentListId` |
-| `JSON.stringify(obj)` | Object → chuỗi JSON |
-| `JSON.parse(str)` | Chuỗi JSON → object |
+| `localStorage.getItem(key)` / `setItem(key, value)` / `removeItem(key)` | Stored in the browser, **strings only**. Since stage 5 only for `theme`, `sortOrder`, `currentListId` |
+| `JSON.stringify(obj)` | Object → JSON string |
+| `JSON.parse(str)` | JSON string → object |
 
-### Gọi server và bất đồng bộ ⏳ GĐ 5
+### Browser history and screen size **[Extra]**
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `fetch(url, { method, headers, body })` | Gửi request. Trả về Promise. **Không tự báo lỗi khi gặp 404/500** |
-| `response.ok` | `true` nếu mã 200–299 |
-| `response.status` | Mã trạng thái, ví dụ 204 |
-| `response.json()` | Đọc body JSON (cũng là bất đồng bộ) |
-| `async function` | Hàm được dùng `await` bên trong, luôn trả về Promise |
-| `await` | Đợi Promise có kết quả rồi mới chạy dòng sau. Trang không bị đơ |
-| `try / catch / finally` | Bắt lỗi. `finally` luôn chạy |
-| `throw new Error("...")` | Tự báo lỗi |
-| `console.error(err)` | In lỗi ra tab Console (F12) |
-| `location.reload()` | Tải lại trang |
+| `window.matchMedia("(max-width: 700px)").matches` | `true` if the screen matches, like `@media` in CSS |
+| `history.pushState(state, "")` | Adds a history step, the URL doesn't change. Back returns to the step before |
+| `history.back()` | Same as pressing Back |
+| `history.replaceState(state, "")` | Changes the current step, doesn't add one |
+| `history.state` | The current step's `state` |
+| `window.scrollTo(0, 0)` | Scroll to the top |
 
-### Cú pháp hay quên
+### Talking to the server, async **[Stage 5]**
 
-| Cú pháp | Nghĩa | Ví dụ |
+| Thing | What it does |
+|---|---|
+| `fetch(url, { method, headers, body })` | Sends a request. Returns a Promise. **Doesn't throw on 404/500** |
+| `response.ok` | `true` for 200–299 |
+| `response.status` | The status code, e.g. 204 |
+| `response.json()` | Reads the JSON body (also async) |
+| `async function` | A function that can use `await`, always returns a Promise |
+| `await` | Wait for a Promise before the next line. The page doesn't freeze |
+| `try / catch / finally` | Catch errors. `finally` always runs |
+| `throw new Error("...")` | Throw an error |
+| `console.error(err)` | Print an error in the Console tab (F12) |
+| `location.reload()` / `window.location.href = "/login"` | Reload the page / go to another page |
+
+### Syntax that's easy to forget
+
+| Syntax | Meaning | Example |
 |---|---|---|
-| `a?.b` | Optional chaining: `a` là `null`/`undefined` thì trả `undefined` thay vì lỗi | `lists[0]?.id` |
-| `a ?? b` | `a` là `null`/`undefined` thì lấy `b` | `lists[0]?.id ?? null` |
-| `a \|\| b` | `a` là giá trị "sai" (`0`, `""`, `null`, `undefined`, `false`) thì lấy `b` | `Number(...) \|\| null` |
-| `x => ...` | Arrow function, hàm viết ngắn | `t => t.id` |
-| `{ method }` | Viết tắt của `{ method: method }` | |
-| `const` / `let` | Biến không gán lại được / gán lại được | |
-| `===` | So sánh bằng, **cả kiểu dữ liệu**: `4 === "4"` là `false` | |
+| `a?.b` | Optional chaining: if `a` is `null`/`undefined`, gives `undefined` instead of crashing | `lists[0]?.id` |
+| `a ?? b` | If `a` is `null`/`undefined`, use `b` | `lists[0]?.id ?? null` |
+| `a \|\| b` | If `a` is "falsy" (`0`, `""`, `null`, `undefined`, `false`), use `b` | `Number(...) \|\| null` |
+| `x => ...` | Arrow function, a short function | `t => t.id` |
+| `{ method }` | Short for `{ method: method }` | |
+| `const` / `let` | Can't reassign / can reassign | |
+| `===` | Equality **including the type**: `4 === "4"` is `false` | |
+| `fn(a, b = {})` | Default parameter value | `el(tag, props = {}, children = [])` |
 
 ---
 
-## 8. JavaScript: Hàm tự viết trong project
+## 8. JavaScript: Functions written in this project
 
-Thứ tự nạp trong `index.html`: storage → toast → pickers → controls → taskActions → taskRender → sidebar → theme → main.
+Load order in `index.html`: storage → toast → pickers → controls → taskActions → taskRender → sidebar → mobile → account → theme → main.
 
-### `storage.js`: dữ liệu
+### `storage.js`: data
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `getCurrentList()` | List đang mở, không có thì `null` |
-| `getTasks()` | Mảng task của list đang mở, không có thì `[]` |
-| `getLists()` / `saveLists(lists)` / `saveTasks()` | Đọc / ghi `lists` vào localStorage. **Bỏ ở GĐ 5** |
-| `migrateOldTasks()` | Chuyển dữ liệu từ bản app cũ (key `"tasks"`). **Bỏ ở GĐ 5** |
-| `apiRequest(method, path, body)` ⏳ GĐ 5 | Gửi request, trả JSON hoặc `null` (204). Lỗi thì ném ra |
-| `apiSave(method, path, body)` ⏳ GĐ 5 | Như trên nhưng tự bắt lỗi, báo người dùng, trả `null` nếu lỗi. Đếm `pendingSaves` |
-| `loadLists()` ⏳ GĐ 5 | `GET /api/lists` vào biến `lists` |
+| `getCurrentList()` | The open list, or `null` |
+| `getTasks()` | The open list's tasks, or `[]` |
+| `apiRequest(method, path, body)` **[Stage 5]** | Sends a request with the CSRF header, returns JSON or `null` (204). On error it throws: `error.message` is the server's `{"error": "..."}`, `error.status` is the code. 401 → goes to `/login` |
+| `apiSave(method, path, body)` **[Stage 5]** | Same, but catches errors, tells the user, returns `null` on failure. Counts `pendingSaves` |
+| `loadList()` **[Stage 5]** | `GET /api/lists` into the `lists` variable |
 
-### `main.js`: khởi động
+### `main.js`: startup
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| `lists`, `currentListId` | Biến toàn cục, mọi file dùng chung |
-| Khởi động | Đọc dữ liệu rồi vẽ sidebar và task. Từ GĐ 5 là hàm `init()`, đợi `loadLists()` |
+| `lists`, `currentListId` | Global variables shared by every file |
+| `init()` | Waits for `loadList()`, then draws the sidebar and tasks |
+| `visibilitychange` listener | Reloads data when you come back to the tab, unless a save is in progress |
 
-### `toast.js`: hộp thoại
+### `toast.js`: dialogs
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `showToast(text, onYes)` | Hỏi Yes/No. Bấm Yes thì gọi `onYes()` |
-| `showInputToast(label, initialValue, onSave, placeholder)` | Ô nhập một dòng. Enter/nút để lưu (gọi `onSave(value)`), Escape để huỷ |
-| `openToast(yesText, noText)` / `closeToast()` | Mở / đóng hộp thoại (dùng nội bộ) |
+| `showToast(text, onYes)` | Yes/No question. Yes calls `onYes()` |
+| `showInputToast(label, initialValue, onSave, placeholder)` | One-line input. Enter/button saves (calls `onSave(value)`), Escape cancels |
+| `showPanelToast(element)` **[Extra]** | Shows any element (the account panel), with just a Close button |
+| `openToast(yesText, noText)` / `closeToast()` | Open / close the dialog (used internally) |
 
-### `pickers.js`: chọn màu, chọn ngày
+### `pickers.js`: color and date pickers
 
-| Hàm / hằng | Làm gì |
+| Function / constant | What it does |
 |---|---|
-| `TASK_COLORS` | Danh sách 6 màu |
-| `formatTaskDate(dateStr)` | `"2026-11-10"` → `"Nov 10, 2026"`, không lệch múi giờ |
-| `createAnchoredPopup(tag, className)` | Tạo popup hiện dưới một nút, tự đóng khi bấm ra ngoài, cuộn, đổi cỡ. Trả `{ element, open, close }` |
-| `openDueDatePicker(anchor, currentValue, onSelect)` | Mở ô chọn ngày, chọn xong gọi `onSelect(ngày hoặc null)` |
-| `openColorPicker(anchor, owner, onSelect)` | Mở bảng màu, chọn xong gọi `onSelect(màu hoặc null)`. Bấm lại cùng nút thì đóng |
+| `TASK_COLORS` | The 6 colors |
+| `formatTaskDate(dateStr)` | `"2026-11-10"` → `"Nov 10, 2026"`, without timezone shifts |
+| `createAnchoredPopup(tag, className)` | A popup under a button, closes on outside click, scroll, resize. Returns `{ element, open, close }` |
+| `openDueDatePicker(anchor, currentValue, onSelect)` | Opens the date picker, calls `onSelect(date or null)` |
+| `openColorPicker(anchor, owner, onSelect)` | Opens the color picker, calls `onSelect(color or null)`. Clicking the same button again closes it |
 
-### `controls.js`: lọc và sắp xếp
+### `controls.js`: filter and sort
 
-| Hàm / biến | Làm gì |
+| Function / variable | What it does |
 |---|---|
-| `setupDropdown(toggleId, menuId, onChange)` | Dựng menu thả xuống: bấm nút để mở, bấm ra ngoài để đóng, chọn thì gọi `onChange(value)` |
+| `setupDropdown(toggleId, menuId, onChange)` | Builds a dropdown: click to open, click outside to close, picking calls `onChange(value)` |
 | `currentFilter` | `"all"` / `"active"` / `"completed"` |
-| `filterTasks(tasks)` | Trả mảng task theo bộ lọc |
-| `currentSort` | `"manual"` / `"earliest"` / `"latest"` / `"color"`, nhớ trong localStorage |
-| `sortTasks(tasks)` | Trả mảng **mới** đã sắp xếp, task không có ngày/màu xếp cuối |
+| `filterTasks(tasks)` | Tasks matching the filter |
+| `currentSort` | `"manual"` / `"earliest"` / `"latest"` / `"color"`, saved in localStorage |
+| `sortTasks(tasks)` | A **new** sorted array, tasks without a date/color go last |
 
-### `taskActions.js`: nơi DUY NHẤT sửa dữ liệu task
+### `taskActions.js`: the ONLY place task data changes
 
-| Hàm | Làm gì | GĐ 5 gửi request |
+| Function | What it does | Request |
 |---|---|---|
-| `findTask(id)` | Tìm task trong list đang mở | |
-| `addTask(text, color, dueDate)` | Thêm task | `POST /api/lists/<id>/tasks`, **đợi server** rồi mới thêm |
-| `updateTask(id, changes)` | Sửa các trường trong `changes` | `PATCH /api/tasks/<id>`, vẽ trước rồi lưu |
-| `deleteTask(id)` | Xoá task | `DELETE /api/tasks/<id>` |
-| `reorderTasks(visibleIds)` | Đổi thứ tự sau khi kéo thả, giữ nguyên task bị ẩn (logic `slots`) | `PUT /api/lists/<id>/order` |
+| `findTask(id)` | Finds a task in the open list | |
+| `addTask(text, color, dueDate)` | Adds a task | `POST /api/lists/<id>/tasks`, **waits for the server** before adding |
+| `updateTask(id, changes)` | Changes the fields in `changes` | `PATCH /api/tasks/<id>`, UI first then save |
+| `deleteTask(id)` | Deletes a task | `DELETE /api/tasks/<id>` |
+| `reorderTasks(visibleIds)` | New order after drag and drop, hidden tasks stay put (`slots` logic) | `PUT /api/lists/<id>/order` |
 
-### `taskRender.js`: vẽ và xử lý thao tác
+### `taskRender.js`: drawing and user input
 
-| Hàm / biến | Làm gì |
+| Function / variable | What it does |
 |---|---|
-| `renderTask()` | Xoá rồi vẽ lại danh sách task (lọc → sắp xếp → `buildTaskItem`) |
-| `buildTaskItem(task)` | Tạo `<li>` cho 1 task: checkbox, chấm màu, chữ, nút ngày, sửa, xoá, kéo thả |
-| `createIconButton(className, imgSrc, alt, onClick)` | Tạo nút có icon |
-| `updateCounters()` | Cập nhật Total / Active / Completed |
-| `pendingColor` / `pendingDueDate` | Màu, ngày đã chọn ở hàng nhập trước khi bấm Add |
-| `updateNewTaskButtons()` / `resetNewTaskRow()` | Cập nhật / xoá hàng nhập task mới |
-| `submitNewTask()` | Đọc ô nhập, hỏi lại nếu trùng, rồi gọi `addTask` |
+| `renderTask()` | Clears and redraws the task list (filter → sort → `buildTaskItem`) |
+| `buildTaskItem(task)` | Makes the `<li>` for a task: checkbox, color dot, text, date, edit, delete, drag and drop |
+| `createIconButton(className, imgSrc, alt, onClick)` | A button with an icon |
+| `updateCounters()` | Updates Total / Active / Completed |
+| `pendingColor` / `pendingDueDate` | Color and date picked in the input row before pressing Add |
+| `updateNewTaskButtons()` / `resetNewTaskRow()` | Update / clear the new task row |
+| `submitNewTask()` | Reads the input, asks if it's a duplicate, then calls `addTask` |
 
-### `sidebar.js`: danh sách list
+### `sidebar.js`: the lists
 
-| Hàm | Làm gì |
+| Function | What it does |
 |---|---|
-| `updateMainVisibility()` | Chưa có list thì hiện màn hình Welcome, có rồi thì hiện giao diện chính |
-| `renderSidebar()` | Vẽ lại danh sách list: chọn, đổi tên (Enter lưu, Escape huỷ, cờ `finished`), xoá |
-| Nút `+` (newListButton) | Mở `showInputToast` để tạo list mới |
+| `updateMainVisibility()` | No lists → Welcome screen, otherwise the main UI |
+| `renderSidebar()` | Redraws the lists: select, rename (Enter saves, Escape cancels, `finished` flag), delete |
+| `+` button (newListButton) | Opens `showInputToast` to create a list |
+| Clicking a list / creating a list | Also calls `openListOnPhone()` (mobile.js). Does nothing on a computer |
+
+### `mobile.js`: phone layout **[Extra]**
+
+| Function / variable | What it does |
+|---|---|
+| `phoneQuery` | `matchMedia("(max-width: 700px)")`, same number as `mobile.css` |
+| `openListOnPhone()` | Adds `listOpen` to `<body>` (shows the list screen) and `history.pushState` |
+| `showListsOnPhone()` | Removes `listOpen` (back to the lists screen) |
+| `‹ Lists` button | `history.back()`, the `popstate` listener does the rest |
+
+### `account.js`: the account panel (ⓘ button) **[Extra]**
+
+| Function | What it does |
+|---|---|
+| `el(tag, props, children)` | Makes an HTML element in one line |
+| `detailRow(label, value)` | A "label ... value" row, e.g. Username |
+| `setStatus(status, text, ok)` | Shows a message under a form, teal if `ok`, red if an error |
+| `buildAccountPanel(account)` | Builds the 4 sections: Account, Display name, Email, Change password, with their save handlers |
+| `syncTimezone()` | Sends the device's timezone to the server if it changed, runs on every page load |
 
 ### `theme.js`: dark mode
 
-| Thứ | Làm gì |
+| Thing | What it does |
 |---|---|
-| Các nút `.themeButton` | Bật/tắt class `dark` trên `<body>`, nhớ lựa chọn trong localStorage |
+| `.themeButton` buttons | Toggle the `dark` class on `<body>`, remembered in localStorage |
 
 ---
 
-## 9. Lệnh terminal
+## 9. Terminal commands
 
-### Môi trường Python (PowerShell)
+### Python environment (PowerShell)
 
-| Lệnh | Làm gì |
+| Command | What it does |
 |---|---|
-| `py -m venv .venv` | Tạo môi trường ảo (một lần) |
-| `.venv\Scripts\activate` | Bật môi trường ảo. Thấy `(.venv)` ở đầu dòng là được |
-| `pip install tên` | Cài thư viện |
-| `pip freeze \| Set-Content -Encoding ascii requirements.txt` | Ghi danh sách thư viện. **Đừng dùng `>`**, PowerShell sẽ lưu UTF-16 và Render không đọc được |
-| `pip install -r requirements.txt` | Cài lại đủ thư viện từ file (máy mới, Render) |
+| `py -m venv .venv` | Create the virtual environment (once) |
+| `.venv\Scripts\activate` | Turn on the virtual environment. `(.venv)` at the start of the line = on |
+| `pip install name` | Install a library |
+| `pip freeze \| Set-Content -Encoding ascii requirements.txt` | Write the library list. **Don't use `>`**, PowerShell saves UTF-16 and Render can't read it |
+| `pip install -r requirements.txt` | Install every library from the file (new machine, Render) |
 
 ### Flask
 
-| Lệnh | Làm gì |
+| Command | What it does |
 |---|---|
-| `flask --app wsgi run --debug` | Chạy server ở máy, tự tải lại khi sửa code. **Không dùng `--debug` trên server thật** |
-| `flask --app wsgi db init` | Tạo thư mục `migrations/` (chỉ một lần) |
-| `flask --app wsgi db migrate -m "mô tả"` | So `models.py` với database, sinh file migration. **Luôn đọc lại file sinh ra** |
-| `flask --app wsgi db upgrade` | Áp dụng migration vào database |
-| `flask --app wsgi db downgrade` | Quay ngược migration gần nhất |
-| `flask --app wsgi routes` | Liệt kê mọi route của app. Tiện để kiểm tra Blueprint đã đăng ký chưa |
-| `pytest` ⏳ GĐ 8 | Chạy test |
-| `gunicorn wsgi:app ...` ⏳ GĐ 10 | Chạy server production (Render). Không chạy trên Windows |
+| `flask --app wsgi run --debug` | Run the server locally, reloads when code changes. **Never `--debug` on a real server** |
+| `flask --app wsgi db init` | Create the `migrations/` folder (once) |
+| `flask --app wsgi db migrate -m "description"` | Compare `models.py` with the database, generate a migration. **Always read the file** |
+| `flask --app wsgi db upgrade` | Apply migrations to the database |
+| `flask --app wsgi db downgrade` | Undo the last migration |
+| `flask --app wsgi db current` | Which migration the database is on |
+| `flask --app wsgi routes` | List every route. Handy to check a Blueprint is registered |
+| `flask --app wsgi send-reminders` | Send the reminder emails now (no `BREVO_API_KEY` → printed in the terminal) |
+| `pytest` ⏳ Stage 8 | Run the tests |
+| `gunicorn wsgi:app ...` ⏳ Stage 10 | Production server (Render). Doesn't run on Windows |
 
 ### Git
 
-| Lệnh | Làm gì |
+| Command | What it does |
 |---|---|
-| `git status` | Xem file đã đổi |
-| `git switch -c tên` | Tạo nhánh mới và chuyển sang |
-| `git mv cũ mới` | Đổi tên/di chuyển file. Commit riêng trước khi sửa nội dung |
-| `git add -A` / `git commit -m "..."` | Lưu thay đổi |
-| `git log --oneline` | Xem lịch sử commit gọn |
-| `git push -u origin tên` | Đẩy nhánh lên GitHub |
-| `git ls-files \| Select-String "\.env"` | Kiểm tra `.env` không bị commit |
+| `git status` | See changed files |
+| `git mv old new` | Rename/move a file. Commit that on its own before changing the content |
+| `git add -A` / `git commit -m "..."` | Save changes |
+| `git log --oneline` | Short commit history |
+| `git push origin main` | Push to GitHub |
+| `git ls-files \| Select-String "\.env"` | Check `.env` was never committed |
