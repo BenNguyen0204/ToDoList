@@ -8,8 +8,8 @@
     text-align: center;
 
     h2 {
-        font-family: 'Bitcount Grid Double Ink', monospace;
-        font-size: 36px;
+        font-size: 40px;
+        font-weight: normal;
         margin: 0;
         opacity: 0.4;
     }

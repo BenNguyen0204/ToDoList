@@ -7,19 +7,30 @@
     filter: invert(1);
 }
 
+/* filter, sort, theme: same small round icon button */
+#filterToggle,
+#sortToggle,
 .themeButton {
+    width: 45px;
+    height: 45px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--button-border);
     background: transparent;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 100px;
-    border: 2px solid var(--button-border);
+    flex-shrink: 0;
+
+    /* center the icon */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover { background: var(--border); }
 
     img {
-        width: 25px;
-        height: 25px;
-        padding: 6px;
+        width: 18px;
+        height: 18px;
+        padding: 0;
         display: block;
     }
 }
@@ -39,34 +50,18 @@
         margin-bottom: 0px;
 
         h1 {
-            font-family: 'Bitcount Grid Double Ink', monospace;
-            font-size: 50px;
+            font-size: 44px;
+            font-weight: normal;
         }
 
         .buttons {
             margin-left: auto;
             display: flex;
+            align-items: center;
             gap: 10px;
 
             .filterDropdown {
                 position: relative;
-
-                #filterToggle, #sortToggle {
-                    background: transparent;
-                    cursor: pointer;
-                    padding: 8px;
-                    border-radius: 100px;
-                    border: 2px solid var(--button-border);
-
-                    &:hover { background: var(--border); }
-
-                    img {
-                        width: 25px;
-                        height: 25px;
-                        padding: 6px;
-                        display: block;
-                    }
-                }
 
                 .filterMenu {
                     display: none;

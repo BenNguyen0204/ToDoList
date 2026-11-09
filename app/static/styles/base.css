@@ -2,7 +2,10 @@ body {
     margin: 0;
     display: flex;
     min-height: 100vh;
-    font-family: 'Iosevka Charon Mono', monospace;
+    font-family: var(--font);
+    /* thinner, smoother text like on a mac */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background: var(--bg);
     color: var(--text);
 }
@@ -17,6 +20,25 @@ input {
     padding: 20px;
     box-sizing: border-box;
     overflow-y: auto;
+
+    /* paper texture, only behind the main area (the sidebar keeps its own background).
+       the path is relative to this css file: styles/ -> ../images/ */
+    background-image:
+        linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.85)),
+        url("../images/paper.jpg");
+    /* fill the whole area, crop instead of stretching */
+    background-size: cover;
+    background-position: center;
+    /* shown while the image loads */
+    background-color: var(--bg);
+}
+
+/* the paper is light, so in dark mode put a dark see-through layer on top of it.
+   the first layer listed is drawn on top */
+.dark .main {
+    background-image:
+        linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.85)),
+        url("../images/paper.jpg");
 }
 
 .overlay {
