@@ -12,6 +12,18 @@ def env_flag(name, default):
         return default
     return value.strip().lower() in ("1", "true", "yes", "on")
 
+# DATABASE_URL from .env (neon) or render. not set -> local sqlite file.
+# neon gives "postgresql://..." or "postgres://...", sqlalchemy needs to know the driver,
+# so turn the start into "postgresql+psycopg://"
+def database_url():
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        return "sqlite:///todo.db"
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
 
 def create_app(test_config=None):
     # reads .env into environment variables. `flask run` does this by itself,
@@ -25,8 +37,10 @@ def create_app(test_config=None):
     cookie_secure = env_flag("COOKIE_SECURE", True)
 
     app.config.update(
-        # ends up in instance/
-        SQLALCHEMY_DATABASE_URI="sqlite:///todo.db",
+        SQLALCHEMY_DATABASE_URI=database_url(),
+        # neon puts the database to sleep when idle and drops old connections.
+        # pre_ping checks a connection works before using it, recycle replaces it every 5 min
+        SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 300},
 
         # signs the session cookie so nobody can fake being logged in. comes from .env, never from git
         SECRET_KEY=os.environ.get("SECRET_KEY"),
