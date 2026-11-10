@@ -86,6 +86,63 @@ Then `db.create_all()` makes the tables. (The real app uses migrations, but for 
 
 ---
 
+## Test design
+
+### Goal
+
+Not "test everything", but **test the things most likely to break, and the things that would hurt most if they broke**. A small suite I trust and actually run is better than a big one nobody maintains.
+
+### How I picked what to test (by risk)
+
+I asked two questions for each feature: *how bad is it if this breaks?* and *how likely is it to break when I change code?*
+
+| Priority | Risk | Why it's high | Test |
+|---|---|---|---|
+| 1 | One user reads or changes another user's data (IDOR) | Worst possible bug: a privacy leak. Easy to cause, one missing filter in one route | 4 |
+| 2 | The API works without logging in | Same kind of leak. The JS also depends on getting `401` to redirect to `/login` | 1 |
+| 3 | Sign up / log in broken | Nobody can use the app at all | 2 |
+| 4 | Core task CRUD broken, or bad input crashes the server | It's the main feature. Bad input should be `400`, never `500` | 3 |
+| 5 | Lists, reordering, cascade delete | Reorder logic has edge cases (tasks not sent must not be lost) | 5 |
+| 6 | Password change | Security: must need the old password, old one must stop working | 6 |
+| 7 | Email verification | Unverified emails must not get reminders (spam, wrong person) | 7 |
+| 8 | Reminder job | Runs unattended every day. Wrong token must be rejected, nobody should get duplicate emails | 8 |
+
+Tests 1–4 were the plan for stage 8. Tests 5–8 were added after the first coverage run showed `api.py` at 54% and `reminders.py` at 36%: coverage told me *which features had no tests at all*, then I picked the risky behavior inside each one.
+
+### Each test, the same pattern
+
+1. **Happy path:** the normal use works.
+2. **"No" cases:** wrong user, wrong password, bad input, wrong token → the right error code.
+3. **Read it back:** check the database really changed (or really didn't), not just the response.
+
+Most bugs that matter live in step 2, so most asserts are there.
+
+### Design decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| **Test through HTTP** with Flask's test client, not by calling Python functions directly | Tests what the browser actually sees: routes, login, JSON, status codes. I can refactor the inside freely and the tests still pass | Slower than unit tests, and when one fails I have to look a bit harder for where |
+| **New app + new database for every test** | Tests can't affect each other, any test can run alone or in any order | A bit slower (~0.5s per test), fine for 8 tests |
+| **Real SQLite file in `tmp_path`**, not the dev database | Never touches my real data. Same kind of database the app uses locally | Production will be PostgreSQL, tiny differences won't be caught |
+| **`db.create_all()` instead of running migrations** | Simple and fast | Doesn't test the migrations themselves |
+| **CSRF and rate limiting turned off** | Otherwise every test has to fetch tokens and would hit "too many attempts" | Those two protections aren't tested here. They're Flask-WTF / Flask-Limiter features, tested by those libraries, and I checked them by hand |
+| **Fake only at the edge** (`send_email`) | Everything up to "send this email" is real code. Only the call to Brevo is replaced | The Brevo request itself isn't tested |
+| **No fake `now` in the reminder test**, use real "tomorrow" in UTC | Simpler | In theory could flake if run exactly at midnight UTC |
+
+### How I know the tests are good
+
+- **Coverage** shows what code *ran*, not what was *checked*. 87% alone doesn't prove much.
+- So I also **broke the code on purpose** (see the table below). If the test still passes, it isn't testing the right thing. Both went red, so they do.
+
+### What I chose not to test
+
+- The real email sending (Brevo): needs a network and an account, little logic of my own.
+- Rate limits and CSRF: library features, turned off for the tests (see above).
+- The frontend JavaScript: would need a browser tool like Playwright. Checked by hand.
+- Timezones other than UTC for reminders: logic exists, not tested yet (see "Next").
+
+---
+
 ## The 8 tests
 
 | # | Test | What it checks |
