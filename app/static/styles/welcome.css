@@ -5,6 +5,10 @@
     justify-content: center;
     gap: 12px;
     text-align: center;
+    /* the welcome text sits on the dark pattern in both themes, so it's always light.
+       index.html gives it class="dark" for the light --text, but color is inherited from
+       body as an already-computed value (dark in light mode), so set it again here */
+    color: var(--text);
 
     h2 {
         font-size: 40px;
