@@ -29,3 +29,9 @@ htmlcov/
 .idea/
 Thumbs.db
 .DS_Store
+
+# personal study notes, kept on my laptop only
+notes/
+
+# old manual api test, replaced by pytest
+app/static/scripts/console_test.js
