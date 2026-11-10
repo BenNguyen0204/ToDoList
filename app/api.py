@@ -294,7 +294,12 @@ def set_email():
         abort(400, "That doesn't look like an email address")
     # same email again: nothing to do, don't send another email
     if value == current_user.email:
-        return jsonify(current_user.to_dict())
+        result = current_user.to_dict()
+        # not verified yet: saving it again works like "Resend link",
+        # otherwise the page says "we sent you a link" and nothing arrives
+        if not current_user.email_verified_at:
+            result["warning"] = try_send_verification()
+        return jsonify(result)
 
     current_user.email = value
     # new address -> has to be verified again
