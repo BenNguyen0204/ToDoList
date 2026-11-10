@@ -25,7 +25,8 @@ How to use this file:
    - **Accounts:** Flask-Login, hashed passwords, every query scoped to the logged-in user.
    - **Security:** CSRF tokens, `SameSite`/`HttpOnly`/`Secure` cookies, rate limiting on login and password change, secrets in environment variables.
 4. **The interesting feature:** email reminders. Signed verification links that expire in 24 hours, a daily job triggered by GitHub Actions, timezone-aware "tomorrow", and a `reminded_for` column so nobody gets the same reminder twice.
-5. **What I learned / what's next:** writing pytest tests, deploying to Render + Neon, and things like password reset.
+5. **Testing:** a pytest suite with 87% coverage, including tests that one user can't touch another's data.
+6. **What's next:** deploying to Render + Neon, and things like password reset.
 
 ---
 
@@ -158,7 +159,19 @@ Know this one cold, it's the most common project question.
 ### Testing (be honest)
 
 **How did you test it?**
-> Honest answer, adjust when stage 8 is done: "I tested the API manually with fetch calls in the browser console, and wrote a console script that runs about 20 checks: valid requests, bad input getting 400, ids that don't exist getting 404. I checked by hand that a second account can't see or change the first account's tasks. For the email and reminder logic I used Flask's test client with a fake mailer and a fake 'now' to check edge cases like completed tasks, running twice, and changed due dates. I checked the phone layout with Playwright screenshots. Next step is turning those checks into a pytest suite."
+> "I have a pytest suite with 8 tests and 87% coverage. Each test gets a fresh app with a temporary database, using Flask's test client. They cover login protection, CRUD, validation, users not being able to touch each other's data, email verification, and the reminder job, where I swap the email function for a fake one to check who got what. To make sure the tests really check something, I broke the ownership filter on purpose and the test went red. Before that, I tested by hand with a PowerShell script against the API."
+
+**Did you write the tests yourself?** (see section 6, be honest)
+> "I designed what to test, the riskiest things first, and an AI assistant wrote most of the test code. Then I went through it, ran coverage, and broke the code on purpose to check the tests fail when they should. I can walk you through any of them."
+
+**Why 87% and not 100%?**
+> The rest is mostly the real email API call and rare error branches. Covering them needs a lot of mocking for little value. I'd rather have the risky parts tested well, and know the tests can fail.
+
+**How do you know a test is actually testing something?**
+> Make it fail. I removed the `user_id` filter from the list lookup and the IDOR test failed with 200 instead of 404. I did the same for the reminder dedupe.
+
+**What's a fixture? What's monkeypatch?**
+> A fixture is setup pytest builds for each test and passes in by name, here a new app and test client. `monkeypatch` temporarily replaces something during one test, I use it to replace `send_email` with a function that just records the email, and pytest puts the real one back afterwards.
 
 **What would you test first?**
 > That user B can't read or change user A's data, because that's the worst bug this app could have. Then: logged out gets 401, CRUD works, and bad input gets 400, not 500.
@@ -216,7 +229,7 @@ Situation, Task, Action, Result. Keep each to about a minute.
 
 ## 5. What I'd improve
 
-- **pytest suite + CI** running on every push.
+- **CI:** run the pytest suite on every push with GitHub Actions.
 - **Password reset** through the verified email, built like the verification link.
 - **Log out other devices on password change**, by storing a session version in the users table.
 - **Undo on failed optimistic updates** instead of just showing an error.
@@ -235,7 +248,7 @@ Then **prove it** by explaining any file they pick. That's why step 3 at the top
 
 **"What was the hardest part?"** Good options: moving from localStorage to the API without breaking drag and drop with filters, or getting "tomorrow" right across timezones.
 
-**"What would you do differently?"** Write tests from the start instead of at stage 8. Plan the email feature's database columns before building the account panel.
+**"What would you do differently?"** Write tests from the start instead of at stage 8. Writing them later meant checking by hand for weeks. Plan the email feature's database columns before building the account panel.
 
 ---
 
