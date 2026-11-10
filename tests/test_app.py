@@ -64,6 +64,13 @@ def create_task(client, text="Buy milk"):
     return response.get_json()["id"]
 
 
+def test_healthz(client):
+    # render's health check: works without logging in
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    assert response.get_json() == {"status": "ok"}
+
+
 def test_api_needs_login(client):
     response = client.get("/api/lists")
     assert response.status_code == 401

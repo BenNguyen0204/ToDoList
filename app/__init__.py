@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, request, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 from .extensions import csrf, db, limiter, login_manager, migrate
 
 
@@ -31,6 +32,12 @@ def create_app(test_config=None):
     load_dotenv()
 
     app = Flask(__name__)
+
+    # on render, https ends at render's proxy and the request reaches us as plain http.
+    # the proxy puts the real scheme, host and visitor ip in X-Forwarded-* headers.
+    # ProxyFix trusts 1 proxy (render), so url_for(_external=True) makes https links
+    # (verification emails) and rate limits count the visitor's ip, not render's
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # secure cookies only travel over https. your laptop is http, so .env sets COOKIE_SECURE=0.
     # on render it stays on (the default)
