@@ -4,7 +4,15 @@ A full-stack to-do list app with user accounts, multiple lists and daily email r
 
 It started as a plain HTML/CSS/JS app that saved everything in `localStorage`. I rebuilt the backend in Flask so the data syncs across devices.
 
-**Live demo:** _coming soon_
+**Live demo:** [todolist-xaw3.onrender.com](https://todolist-xaw3.onrender.com) (free plan, the first load can take up to a minute)
+
+![Desktop view](docs/screenshots/desktop.png)
+
+<p align="center">
+  <img src="docs/screenshots/phone-lists.png" alt="Phone: lists" width="260">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/phone-tasks.png" alt="Phone: tasks in a list" width="260">
+</p>
 
 ## Features
 
