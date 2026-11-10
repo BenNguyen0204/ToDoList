@@ -181,3 +181,50 @@ flask --app wsgi db current
 - Always read the generated file in `migrations/versions/` before running `upgrade`.
 - Adding a required column to a table that already has data fails, because the old rows have no value for it.
 - If you change `models.py` and forget `migrate` + `upgrade`, the app crashes with `no such table: users` or `no such column`.
+
+---
+
+## Connection pool (stage 9, Neon)
+
+A **connection pool** is a group of database connections that are opened once and kept around to be reused.
+
+### Why it's needed
+
+Every time the app reads or writes the database it needs a connection. Opening a new one is slow: find the Neon server over the network, set up encryption (SSL), log in. That's about **100–300 ms**.
+
+If every request opened a new connection and closed it right after, the app would be slow.
+
+### How it works
+
+```text
+Request 1 → borrow connection A from the pool → run the query → give A back
+Request 2 → borrow A again (already open)     → run the query → give A back
+```
+
+Connections are borrowed and returned, not closed. The next request uses one straight away, without waiting to open a new one. **SQLAlchemy does this by itself**, there's no code to write.
+
+Like a bike-share: instead of buying a new bike for every trip, you take one from the station and put it back for the next person.
+
+### The problem with Neon, and the fix
+
+Neon puts the database to sleep when nobody uses it, and closes connections that have been idle for a while. But the pool doesn't know that: it still thinks connection A is open. The next request borrows A, and the query fails with a connection error.
+
+In `create_app()`:
+
+```python
+SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 300}
+```
+
+| Option | What it does | Bike-share version |
+|---|---|---|
+| `pool_pre_ping=True` | Before lending a connection, send a tiny test query (like `SELECT 1`). If it's dead, throw it away and open a new one | Check the tires before handing out the bike |
+| `pool_recycle=300` | Replace any connection older than 300 seconds (5 min), before the server gets a chance to close it | Retire bikes regularly instead of waiting for them to break |
+
+The cost: the ping adds a tiny bit of time to each request. Much better than random errors.
+
+### SQLite vs Neon
+
+- **SQLite** (local, and in the tests) is a file on your own disk, so opening it is almost free. The pool matters much less.
+- **Neon** is a server somewhere else on the internet, so the pool (and `pre_ping`) really matters.
+
+That's also why the symptom "random database connection errors on Render" means `pool_pre_ping` is missing (see `FLASK_GUIDE.md`).

@@ -96,6 +96,9 @@ Know this one cold, it's the most common project question.
 **What's the N+1 problem and did you hit it?**
 > Loading 100 lists and then each list's tasks one by one is 1 + 100 queries. In `GET /api/lists` I use `selectinload(TodoList.tasks)`, which loads all the tasks in one extra query using `WHERE list_id IN (...)`. So it's 2 queries no matter how many lists.
 
+**What's a connection pool? Did you configure it?**
+> Opening a database connection takes a few hundred milliseconds: network, SSL, login. A pool keeps connections open and reuses them across requests. SQLAlchemy does that by default. What I had to add was `pool_pre_ping` and `pool_recycle`, because Neon closes idle connections and the pool would otherwise hand out a dead one. Pre-ping tests the connection before using it, and recycle replaces connections older than 5 minutes.
+
 **Why indexes on `lists.user_id` and `tasks.list_id`?**
 > The app looks things up by those columns on every request, and PostgreSQL doesn't index foreign keys automatically.
 
