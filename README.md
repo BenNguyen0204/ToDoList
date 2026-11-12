@@ -49,6 +49,78 @@ It started as a plain HTML/CSS/JS app that saved everything in `localStorage`. I
 | Testing | pytest, pytest-cov (87% coverage) |
 | Deployment | Render (gunicorn), Neon, GitHub Actions |
 
+## Architecture
+
+```mermaid
+flowchart TB
+    User(["Browser<br/>(desktop or phone)"])
+    subgraph Render["Render (gunicorn)"]
+        Pages["pages + auth<br/>HTML pages, log in / sign up"]
+        API["api<br/>REST JSON"]
+        Rem["reminders<br/>/internal/send-reminders"]
+    end
+    DB[("PostgreSQL<br/>on Neon")]
+    GHA["GitHub Actions<br/>daily cron"]
+    Brevo["Brevo API"]
+    Inbox(["User's inbox"])
+
+    User -- "page load, forms" --> Pages
+    User -- "fetch + CSRF token" --> API
+    Pages --> DB
+    API -- "SQLAlchemy, scoped to current_user" --> DB
+    GHA -- "POST + Bearer token" --> Rem
+    Rem --> DB
+    Rem --> Brevo --> Inbox
+```
+
+**How a request goes**
+
+1. The browser loads `/` once. Flask renders `index.html` with the CSRF token in a `<meta>` tag.
+2. After that the JavaScript only talks to `/api/...` with `fetch`, sending the token in an `X-CSRFToken` header.
+3. Flask-Login reads the session cookie. Every query filters by `current_user.id`, so another user's ids return 404.
+4. The UI updates right away (optimistic update). If the save fails, a message asks the user to reload the page.
+
+**Code layout**
+
+- `create_app()` builds the app, so tests can make a fresh one with their own config
+- 4 blueprints: `pages`, `auth`, `api` (under `/api`) and `reminders`
+- Database changes go through Flask-Migrate, and Render runs `db upgrade` on every deploy
+
+**Data model**
+
+```mermaid
+erDiagram
+    USER ||--o{ LIST : owns
+    LIST ||--o{ TASK : contains
+    USER {
+        int id
+        string username
+        string email
+        string timezone
+        string password_hash
+    }
+    LIST {
+        int id
+        int user_id
+        string name
+    }
+    TASK {
+        int id
+        int list_id
+        string text
+        bool completed
+        date due_date
+        int position
+        date reminded_for
+    }
+```
+
+Deleting a user deletes their lists, and deleting a list deletes its tasks. `position` keeps the drag and drop order, and `reminded_for` stops the same reminder from being sent twice.
+
+**Daily reminders**
+
+GitHub Actions calls `/internal/send-reminders` once a day with a secret token. The app finds unfinished tasks due tomorrow in each user's timezone, sends one email per user through Brevo and saves `reminded_for`. Using an outside scheduler means the app doesn't need a background worker, which Render's free plan doesn't have.
+
 ## Security
 
 - Passwords are stored as salted hashes, never in plain text
