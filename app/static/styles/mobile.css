@@ -2,7 +2,6 @@
    one screen at a time: the sidebar (your lists) first, tap a list to open it.
    body.listOpen is switched by mobile.js. loaded last so it wins over the other files */
 
-/* only on phones */
 .backButton {
     display: none;
 }
@@ -12,7 +11,6 @@
         display: block;
     }
 
-    /* LISTS SCREEN */
     .sidebar {
         width: 100%;
         /* dvh = the visible height, without the browser's address bar */
@@ -36,7 +34,6 @@
             }
         }
 
-        /* bigger rows, easier to tap */
         #listTabs li {
             font-size: 17px;
             padding: 14px 12px;
@@ -59,7 +56,6 @@
         padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
     }
 
-    /* LIST SCREEN */
     body.listOpen {
         .sidebar {
             display: none;
@@ -117,7 +113,6 @@
             }
         }
 
-        /* input on its own row, color/date/add under it */
         .inputRow {
             flex-wrap: wrap;
             margin-top: 16px;
@@ -155,7 +150,6 @@
                 overflow-wrap: anywhere;
             }
 
-            /* buttons get their own row under the text */
             .buttonGroup {
                 flex-basis: 100%;
                 justify-content: flex-end;

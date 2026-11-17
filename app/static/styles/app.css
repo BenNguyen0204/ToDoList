@@ -7,7 +7,6 @@
     filter: invert(1);
 }
 
-/* filter, sort, theme: same small round icon button */
 #filterToggle,
 #sortToggle,
 .themeButton {
@@ -20,7 +19,6 @@
     cursor: pointer;
     flex-shrink: 0;
 
-    /* center the icon */
     display: flex;
     align-items: center;
     justify-content: center;

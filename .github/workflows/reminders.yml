@@ -9,7 +9,6 @@ on:
     # 13:00 UTC = morning in Canada, evening in Vietnam. "tomorrow" is worked out per user's timezone.
     # github can start scheduled runs a bit late, that's fine here
     - cron: "0 13 * * *"
-  # adds a "Run workflow" button in the Actions tab, for testing
   workflow_dispatch:
 
 jobs:

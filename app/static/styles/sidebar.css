@@ -11,7 +11,6 @@
     flex-direction: column;
 
     .sidebarFooter {
-        /* pushes it to the bottom */
         margin-top: auto;
         padding-top: 12px;
         border-top: 2px solid var(--border);
@@ -31,7 +30,6 @@
             margin: 0;
         }
 
-        /* the small round (i) that opens the account panel */
         .accountInfoButton {
             flex-shrink: 0;
             width: 18px;

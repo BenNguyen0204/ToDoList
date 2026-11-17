@@ -9,7 +9,6 @@ async function apiRequest(method, path, body) {
         options.headers["Content-Type"] = "application/json";
         options.body = JSON.stringify(body);
     }
-    // every change (POST, PATCH, PUT, DELETE) has to carry the token, GET doesn't need it
     if (method !== "GET") {
         options.headers["X-CSRFToken"] = csrfToken;
     }
@@ -23,14 +22,12 @@ async function apiRequest(method, path, body) {
     }
 
     if (!response.ok) {
-        // the API sends {"error": "..."}, keep that message so the UI can show it
         const data = await response.json().catch(() => null);
         const error = new Error(data?.error || `${method} ${path} failed: ${response.status}`);
         error.status = response.status;
         throw error;
     }
 
-    // 204 = no content
     if (response.status === 204) return null;
 
     return response.json();

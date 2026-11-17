@@ -1,7 +1,5 @@
-// FILTER & SORT
 // only decides which tasks show and in what order, never changes the data
 
-// dropdown used by both filter and sort. click to toggle, click outside to close
 function setupDropdown(toggleId, menuId, onChange) {
     const toggle = document.getElementById(toggleId);
     const menu = document.getElementById(menuId);
@@ -45,7 +43,6 @@ setupDropdown("sortToggle", "sortMenu", (value) => {
     renderTask();
 });
 
-// returns a sorted copy, doesn't mess with the original
 function sortTasks(tasks) {
     if (currentSort === "earliest" || currentSort === "latest") {
         const withDate = tasks.filter(t => t.dueDate);
@@ -58,7 +55,6 @@ function sortTasks(tasks) {
     }
 
     if (currentSort === "color") {
-        // same order as the picker
         const colorOrder = TASK_COLORS.map(c => c.value);
         const withColor = tasks.filter(t => t.color);
         // no color -> always last

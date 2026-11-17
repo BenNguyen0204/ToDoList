@@ -1,4 +1,3 @@
-// PHONE LAYOUT
 // on a phone only one screen shows at a time (mobile.css): first the sidebar with your lists,
 // tap a list to open it. "‹ Lists" or the phone's back gesture goes back.
 // body.listOpen = the list screen is showing
@@ -26,7 +25,6 @@ backToLists.addEventListener("click", () => {
     else showListsOnPhone();
 });
 
-// back (or forward) gesture
 window.addEventListener("popstate", () => {
     if (history.state?.listOpen && phoneQuery.matches) document.body.classList.add("listOpen");
     else showListsOnPhone();

@@ -1,4 +1,3 @@
-// TASK LIST RENDERING + USER INPUT
 // doesn't change data itself, it calls addTask / updateTask / deleteTask / reorderTasks (taskActions.js)
 
 const tasksList = document.getElementById("tasksList");
@@ -8,7 +7,6 @@ const addButton = document.getElementById("addButton");
 const newTaskColorButton = document.getElementById("newTaskColorButton");
 const newTaskDateButton = document.getElementById("newTaskDateButton");
 
-// RENDER
 
 function renderTask() {
     updateMainVisibility();
@@ -31,7 +29,6 @@ function renderTask() {
     updateCounters();
 }
 
-// one <li> per task: checkbox, color dot, text, date, edit, delete
 function buildTaskItem(task) {
     const li = document.createElement("li");
     li.dataset.id = String(task.id);
@@ -109,7 +106,6 @@ function updateCounters() {
     document.getElementById("completedCount").textContent = `Completed: ${completed}`;
 }
 
-// DRAG & DROP
 // while dragging we only move the <li> around,
 // the actual reorder happens on dragend (in buildTaskItem)
 tasksList.addEventListener("dragover", (e) => {
@@ -117,7 +113,6 @@ tasksList.addEventListener("dragover", (e) => {
     const dragging = tasksList.querySelector(".dragging");
     if (!dragging) return;
 
-    // drop it before the first task where the mouse is in its top half
     const others = [...tasksList.querySelectorAll("li:not(.dragging)")];
     const insertBefore = others.find(el => {
         const rect = el.getBoundingClientRect();
@@ -126,7 +121,6 @@ tasksList.addEventListener("dragover", (e) => {
     tasksList.insertBefore(dragging, insertBefore || null);
 });
 
-// NEW TASK ROW
 // color/date picked before hitting Add live here for now
 let pendingColor = null;
 let pendingDueDate = null;

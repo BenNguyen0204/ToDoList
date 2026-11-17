@@ -15,7 +15,6 @@ from .models import Task, TodoList
 blueprint = Blueprint("api", __name__)
 
 # runs before EVERY route in this blueprint, so no route can forget to check login.
-# not logged in -> login_required calls unauthorized_handler -> 401 json
 @blueprint.before_request
 @login_required
 def require_login():
@@ -23,19 +22,13 @@ def require_login():
 
 COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 
-# ---------- validation ----------
-# don't trust anything the client sends (JS could have a bug, or someone calls the API directly)
-# bad input -> abort(400, "reason") and flask stops right there
-
 def get_json_body():
-    # silent=True returns None instead of raising when the body isn't valid json
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         abort(400, "Request body must be a JSON object")
     return data
 
 def validate_text(value, field, max_length):
-    # has to be a string, not empty after strip, and fit in the column
     if not isinstance(value, str) or not value.strip():
         abort(400, f"{field} must be a non-empty string")
     value = value.strip()
@@ -54,7 +47,6 @@ def validate_due_date(value):
     if value is None:
         return None
     try:
-        # "2026-11-07" -> date(2026, 11, 7)
         return date.fromisoformat(value)
     except (TypeError, ValueError):
         abort(400, "dueDate must be a date like 2026-11-07")
@@ -64,8 +56,6 @@ def validate_completed(value):
         abort(400, "completed must be true or false")
     return value
 
-# ---------- lookups ----------
-# flask pulls <int:list_id> out of the url and passes it in.
 # ALWAYS filter by the logged-in user, otherwise anyone could edit anyone's data
 # just by changing the id in the url (that bug is called IDOR).
 # someone else's list -> 404, same as "doesn't exist", so we don't even confirm it exists
@@ -82,15 +72,11 @@ def get_task_or_404(task_id):
     )
     return db.first_or_404(query, description="Task not found")
 
-# ---------- lists ----------
 @blueprint.get("/lists")
 def get_lists():
-    # selectinload gets all the tasks in one query:
-    # SELECT * FROM tasks WHERE list_id IN (1, 2, ..., 100) ORDER BY position;
-    # instead of one query per list (WHERE list_id = 1, then 2, ...)
+    # selectinload gets all the tasks in one query instead of one query per list
     query = (
         db.select(TodoList)
-        # only my lists
         .where(TodoList.user_id == current_user.id)
         .options(selectinload(TodoList.tasks))
         .order_by(TodoList.id)
@@ -102,14 +88,9 @@ def get_lists():
 def create_list():
     data = get_json_body()
     name = validate_text(data.get("name"), "name", 100)
-    # returns {"id": 5, "name": "Chores", "tasks": []}
- 
-    # new list belongs to me
     todo_list = TodoList(name=name, user_id=current_user.id)
     db.session.add(todo_list)
-    # id gets assigned here
     db.session.commit()
-    # 201 = created
     return jsonify(todo_list.to_dict()), 201
 
 @blueprint.patch("/lists/<int:list_id>")
@@ -126,13 +107,10 @@ def update_list(list_id):
 @blueprint.delete("/lists/<int:list_id>")
 def delete_list(list_id):
     todo_list = get_list_or_404(list_id)
-    # tasks go too (cascade)
     db.session.delete(todo_list)
     db.session.commit()
-    # 204 = ok, nothing to return
     return "", 204
 
-# ---------- tasks ----------
 @blueprint.post("/lists/<int:list_id>/tasks")
 def create_task(list_id):
     todo_list = get_list_or_404(list_id)
@@ -170,7 +148,6 @@ def reorder_tasks(list_id):
     ):
         abort(400, "taskIds must be a list of integers")
         
-    # id -> task, only this list's tasks
     tasks_by_id = {task.id: task for task in todo_list.tasks}
     
     # follow taskIds, skip ids from other lists and duplicates
@@ -217,8 +194,6 @@ def delete_task(task_id):
     db.session.commit()
     return "", 204
 
-# ---------- account ----------
-
 @blueprint.get("/account")
 def get_account():
     return jsonify(current_user.to_dict())
@@ -237,13 +212,11 @@ def update_account():
         # empty clears it, then the app shows the username again
         current_user.display_name = value or None
 
-    # sent by account.js when the browser's timezone changes. used for reminders
     if "timezone" in data:
         value = data["timezone"]
         try:
             if not isinstance(value, str) or len(value) > 64:
                 raise ValueError
-            # throws if it's not a real timezone
             ZoneInfo(value)
         except (ValueError, ZoneInfoNotFoundError):
             abort(400, "timezone must be something like America/Toronto")
@@ -283,7 +256,6 @@ def set_email():
         abort(400, "email must be a string")
     value = (value or "").strip().lower()
 
-    # empty = remove it, reminders stop
     if not value:
         current_user.email = None
         current_user.email_verified_at = None
@@ -292,7 +264,6 @@ def set_email():
 
     if len(value) > 254 or not EMAIL_PATTERN.match(value):
         abort(400, "That doesn't look like an email address")
-    # same email again: nothing to do, don't send another email
     if value == current_user.email:
         result = current_user.to_dict()
         # not verified yet: saving it again works like "Resend link",
@@ -302,12 +273,10 @@ def set_email():
         return jsonify(result)
 
     current_user.email = value
-    # new address -> has to be verified again
     current_user.email_verified_at = None
     try:
         db.session.commit()
     except IntegrityError:
-        # unique constraint, another account has it
         db.session.rollback()
         abort(400, "That email is already used by another account")
 
@@ -345,7 +314,6 @@ def change_password():
     # 400, not 401: the JS treats 401 as "logged out" and goes to /login
     if not check_password_hash(current_user.password_hash, current):
         abort(400, "Current password is wrong")
-    # same rule as sign up (auth.py)
     if not MIN_PASSWORD_LENGTH <= len(new) <= MAX_PASSWORD_LENGTH:
         abort(400, f"New password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters")
 
@@ -353,68 +321,14 @@ def change_password():
     db.session.commit()
     return "", 204
 
-# ---------- json errors ----------
 # registered on the app, not the blueprint. a bad url like /api/abc doesn't match
 # any blueprint route so a blueprint handler would never see it
  
 def register_error_handlers(app):
     def handle_error(error):
-        # /api/ gets json so the JS can read it
         if request.path.startswith("/api/"):
             return jsonify(error=error.description), error.code
-        # normal pages keep flask's default error page
         return error
- 
-    # 429 = rate limited (password change, emails). 502 = brevo didn't take the email
+
     for code in (400, 404, 405, 429, 502):
         app.register_error_handler(code, handle_error)
-
-
-# ---------- manual API test (PowerShell) ----------
-# it's inside a """ string instead of # comments so i can copy paste it straight into powershell.
-# run "flask run" in one terminal, paste the blocks in order in another one
-# ($B, $L, $t1... stick around between pastes)
-"""
-# 0. base url
-$B = "http://127.0.0.1:5000/api"
-
-# 1. get all lists
-Invoke-RestMethod "$B/lists" | ConvertTo-Json -Depth 5
-
-# 2. make a list, save its id in $L
-$L = (Invoke-RestMethod -Method Post "$B/lists" -ContentType "application/json" -Body '{"name":"Test list"}').id
-$L
-
-# 3. rename it
-Invoke-RestMethod -Method Patch "$B/lists/$L" -ContentType "application/json" -Body '{"name":"Renamed"}'
-
-# 4. add 3 tasks (positions 0, 1, 2)
-$t1 = (Invoke-RestMethod -Method Post "$B/lists/$L/tasks" -ContentType "application/json" -Body '{"text":"Task A"}').id
-$t2 = (Invoke-RestMethod -Method Post "$B/lists/$L/tasks" -ContentType "application/json" -Body '{"text":"Task B","color":"#ff8800"}').id
-$t3 = (Invoke-RestMethod -Method Post "$B/lists/$L/tasks" -ContentType "application/json" -Body '{"text":"Task C","dueDate":"2026-11-08"}').id
-"$t1 $t2 $t3"
-
-# 5. mark one done, clear a color
-Invoke-RestMethod -Method Patch "$B/tasks/$t1" -ContentType "application/json" -Body '{"completed":true}'
-Invoke-RestMethod -Method Patch "$B/tasks/$t2" -ContentType "application/json" -Body '{"color":null}'
-
-# 6. reorder to C, A, B and check it
-Invoke-RestMethod -Method Put "$B/lists/$L/order" -ContentType "application/json" -Body (@{taskIds = @($t3, $t1, $t2)} | ConvertTo-Json)
-(Invoke-RestMethod "$B/lists") | Where-Object id -eq $L | ConvertTo-Json -Depth 5
-
-# 7. bad requests, each should fail with 400 / 404 (red text = good)
-Invoke-RestMethod -Method Post "$B/lists" -ContentType "application/json" -Body '{"name":"   "}'
-Invoke-RestMethod -Method Post "$B/lists/$L/tasks" -ContentType "application/json" -Body '{"text":"X","color":"red"}'
-Invoke-RestMethod -Method Post "$B/lists/$L/tasks" -ContentType "application/json" -Body '{"text":"X","dueDate":"08/11/2026"}'
-Invoke-RestMethod -Method Patch "$B/tasks/$t1" -ContentType "application/json" -Body '{"completed":"yes"}'
-Invoke-RestMethod -Method Put "$B/lists/$L/order" -ContentType "application/json" -Body '{"taskIds":"1,2,3"}'
-Invoke-RestMethod -Method Put "$B/lists/$L/order" -ContentType "application/json" -Body '{"taskIds":["1","2"]}'
-Invoke-RestMethod -Method Put "$B/lists/$L/order" -ContentType "application/json" -Body '{"taskIds":[true,false]}'
-Invoke-RestMethod -Method Post "$B/lists" -ContentType "application/json" -Body 'not json'
-Invoke-RestMethod "$B/lists/999999" -Method Patch -ContentType "application/json" -Body '{"name":"x"}'
-Invoke-RestMethod "$B/does-not-exist"
-
-# 8. cleanup: delete a task, then the list (cascade gets the rest)
-Invoke-RestMethod -Method Delete "$B/tasks/$t3"
-Invoke-RestMethod -Method Delete "$B/lists/$L"
-"""

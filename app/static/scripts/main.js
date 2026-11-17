@@ -1,14 +1,10 @@
-// globals, the other files use these.
-// lists is empty until we load it from the server
 let lists = [];
 let currentListId = Number(localStorage.getItem("currentListId")) || null;
 
-// on page load: fetch first, then render
 async function init() {
     try {
         await loadList();
     } catch(e) {
-        // nothing to render, show a toast with retry
         console.error(e);
         showToast("Couldn't load your lists. Try again?", init);
         return;
@@ -28,7 +24,6 @@ document.addEventListener("visibilitychange", async () => {
         renderSidebar();
         renderTask();
     } catch (err) {
-        // background refresh, just log it
         console.error(err);
     }
 });

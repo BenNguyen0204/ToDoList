@@ -1,4 +1,3 @@
-# register / login / logout. these are normal html pages (forms), not json
 import re
 from datetime import datetime, timezone
 
@@ -21,19 +20,16 @@ MAX_PASSWORD_LENGTH = 128
 
 
 def read_form():
-    # lowercase so "Hung" and "hung" are the same account
     username = request.form.get("username", "").strip().lower()
     password = request.form.get("password", "")
     return username, password
 
 
-# rate limit key for login: the username being tried.
 # limiting only by ip isn't enough on its own: lots of people can share one ip (school wifi)
 def username_key():
     return "user:" + (request.form.get("username", "").strip().lower() or client_ip())
 
 
-# too many attempts -> limiter raises a 429. show it on the form instead of a bare error page
 @blueprint.errorhandler(429)
 def too_many_attempts(error):
     mode = "register" if request.endpoint == "auth.register" else "login"
@@ -49,9 +45,7 @@ def no_store(response):
     return response
 
 
-# already logged in and opened /login or /register
 def already_logged_in(mode):
-    # just opening the page -> go to your lists
     if request.method == "GET":
         return redirect(url_for("pages.index"))
     # a form got sent anyway (e.g. from an old page). don't quietly ignore it,
@@ -61,7 +55,6 @@ def already_logged_in(mode):
 
 
 @blueprint.route("/register", methods=["GET", "POST"])
-# max 10 sign-ups per hour from one ip, stops a script from making thousands of accounts
 @limiter.limit("10 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
@@ -98,7 +91,6 @@ def register():
 
 
 @blueprint.route("/login", methods=["GET", "POST"])
-# only POSTs count (just opening the page shouldn't).
 # 10/min per username stops guessing one account's password,
 # 30/min per ip stops one person trying lots of different usernames
 @limiter.limit("10 per minute", methods=["POST"], key_func=username_key)
@@ -116,7 +108,6 @@ def login():
         if user is None or not check_password_hash(user.password_hash, password):
             flash("Wrong username or password")
         else:
-            # remember=True keeps you logged in after closing the browser
             login_user(user, remember=True)
             return redirect(url_for("pages.index"))
 

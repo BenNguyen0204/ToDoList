@@ -1,4 +1,3 @@
-# sending email through brevo + the signed links in verification emails.
 # named mailer.py, not email.py, so it doesn't get mixed up with python's email module
 import json
 import urllib.request
@@ -8,7 +7,6 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
-# verification links stop working after 24h
 VERIFY_MAX_AGE = 24 * 60 * 60
 
 
@@ -49,7 +47,6 @@ def make_verify_token(user):
     return _serializer().dumps({"uid": user.id, "email": user.email})
 
 
-# None if it's fake, edited, or older than 24h
 def read_verify_token(token):
     try:
         return _serializer().loads(token, max_age=VERIFY_MAX_AGE)

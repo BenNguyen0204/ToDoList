@@ -98,7 +98,6 @@
     width: 100%;
     text-align: left;
 
-    /* HEADER: title + subtitle on the left, x on the right */
     .accountHeader {
         display: flex;
         align-items: flex-start;
@@ -141,7 +140,6 @@
         }
     }
 
-    /* BODY: everything between the header and the Close bar */
     .accountBody {
         display: flex;
         flex-direction: column;
@@ -149,7 +147,6 @@
         padding: 20px 22px;
     }
 
-    /* grey box with username / member since in 2 columns */
     .accountInfo {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -168,7 +165,6 @@
         min-width: 0;
     }
 
-    /* small grey uppercase label above a value */
     .accountLabel {
         font-size: 11px;
         text-transform: uppercase;
@@ -202,14 +198,12 @@
         font-weight: normal;
     }
 
-    /* inside the panel inputs are rounded boxes, not pills like the other dialogs */
     .toastInput {
         border-radius: 10px;
         border-width: 1px;
         padding: 9px 14px;
     }
 
-    /* input + button on one row. wraps under each other on a narrow phone */
     .accountInline {
         display: flex;
         flex-wrap: wrap;
@@ -235,14 +229,12 @@
         &:hover { background: var(--primary-hover); }
     }
 
-    /* "Change password" button on the right */
     .accountActions {
         display: flex;
         justify-content: flex-end;
         margin-top: 4px;
     }
 
-    /* "verified / not verified" text + resend link */
     .accountHintRow {
         display: flex;
         flex-wrap: wrap;

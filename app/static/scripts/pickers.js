@@ -1,4 +1,3 @@
-// COLOR + DATE PICKERS
 // small popups that show up under the button you clicked.
 // they don't change any data, the caller passes a callback for that
 
@@ -18,7 +17,6 @@ function formatTaskDate(dateStr) {
     return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-// popup under a button, closes on outside click / scroll / resize
 function createAnchoredPopup(tagName, className) {
     const el = document.createElement(tagName);
     el.className = className;
@@ -43,7 +41,6 @@ function createAnchoredPopup(tagName, className) {
     return { element: el, open, close };
 }
 
-// DATE
 const dueDatePopup = createAnchoredPopup("input", "dueDatePicker");
 dueDatePopup.element.type = "date";
 let dueDateOnSelect = null;
@@ -63,7 +60,6 @@ function openDueDatePicker(anchor, currentValue, onSelect) {
     if (dueDatePopup.element.showPicker) dueDatePopup.element.showPicker();
 }
 
-// COLOR
 const colorPopup = createAnchoredPopup("div", "colorPicker");
 // which button opened it, clicking it again closes it
 let colorPickerOwner = null;

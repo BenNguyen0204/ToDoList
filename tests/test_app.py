@@ -56,7 +56,6 @@ def logout(client):
     client.post("/logout")
 
 
-# makes a list and a task in it, returns the task's id
 def create_task(client, text="Buy milk"):
     todo_list = client.post("/api/lists", json={"name": "Groceries"}).get_json()
     response = client.post(f"/api/lists/{todo_list['id']}/tasks", json={"text": text})
@@ -65,7 +64,6 @@ def create_task(client, text="Buy milk"):
 
 
 def test_healthz(client):
-    # render's health check: works without logging in
     response = client.get("/healthz")
     assert response.status_code == 200
     assert response.get_json() == {"status": "ok"}
@@ -80,10 +78,8 @@ def test_api_needs_login(client):
 def test_sign_up_then_log_in(client):
     register(client, "alice")
     logout(client)
-    # logged out again -> api is locked
     assert client.get("/api/lists").status_code == 401
 
-    # wrong password doesn't log you in
     response = client.post("/login", data={"username": "alice", "password": "wrong-password"})
     assert response.status_code == 200
     assert client.get("/api/lists").status_code == 401
@@ -106,7 +102,6 @@ def test_create_edit_delete_task(client):
     assert task["completed"] is True
     assert task["dueDate"] == "2026-11-20"
 
-    # bad input is rejected and nothing changes
     assert client.patch(f"/api/tasks/{task_id}", json={"color": "red"}).status_code == 400
 
     # the change was saved, not just echoed back
@@ -119,7 +114,6 @@ def test_create_edit_delete_task(client):
 
 
 def test_users_cant_touch_each_others_data(client):
-    # alice makes a list with a task
     register(client, "alice")
     task_id = create_task(client)
     [alice_list] = client.get("/api/lists").get_json()
@@ -135,7 +129,6 @@ def test_users_cant_touch_each_others_data(client):
     assert client.delete(f"/api/lists/{alice_list['id']}").status_code == 404
     logout(client)
 
-    # alice's data is untouched
     login(client, "alice")
     assert client.get("/api/lists").get_json() == [alice_list]
 
@@ -157,7 +150,6 @@ def test_lists_rename_reorder_delete(client):
     assert [t["text"] for t in todo_list["tasks"]] == ["C", "A", "B"]
     assert client.put(f"/api/lists/{list_id}/order", json={"taskIds": "1,2"}).status_code == 400
 
-    # deleting the list takes its tasks with it
     assert client.delete(f"/api/lists/{list_id}").status_code == 204
     assert client.get("/api/lists").get_json() == []
     assert client.patch(f"/api/tasks/{ids[0]}", json={"text": "x"}).status_code == 404
@@ -172,7 +164,6 @@ def test_account_settings_and_password_change(client):
     assert response.get_json()["timezone"] == "America/Toronto"
     assert client.patch("/api/account", json={"timezone": "Mars/Base"}).status_code == 400
 
-    # wrong current password or too short a new one -> 400, password unchanged
     assert client.post("/api/account/password",
                        json={"currentPassword": "nope", "newPassword": "newpassword1"}).status_code == 400
     assert client.post("/api/account/password",
@@ -180,7 +171,6 @@ def test_account_settings_and_password_change(client):
     assert client.post("/api/account/password",
                        json={"currentPassword": "password123", "newPassword": "newpassword1"}).status_code == 204
 
-    # only the new password works now
     logout(client)
     assert client.post("/login", data={"username": "alice", "password": "password123"}).status_code == 200
     login(client, "alice", "newpassword1")
@@ -189,7 +179,6 @@ def test_account_settings_and_password_change(client):
 def verify_email(app, client, email):
     response = client.put("/api/account/email", json={"email": email})
     assert response.status_code == 200
-    # the token that would be in the email
     with app.app_context():
         user = db.session.scalar(db.select(User).filter_by(email=email))
         token = make_verify_token(user)
@@ -204,14 +193,12 @@ def test_email_verification(app, client):
     assert verify_email(app, client, "alice@example.com").status_code == 200
     assert client.get("/api/account").get_json()["emailVerified"] is True
 
-    # another account can't take the same email
     logout(client)
     register(client, "bob")
     assert client.put("/api/account/email", json={"email": "alice@example.com"}).status_code == 400
 
 
 def test_reminders(app, client, monkeypatch):
-    # catch emails instead of sending them
     sent = []
     monkeypatch.setattr(reminders, "send_email", lambda to, subject, text: sent.append((to, subject, text)))
 
@@ -232,5 +219,4 @@ def test_reminders(app, client, monkeypatch):
     assert to == "alice@example.com"
     assert "Essay" in text and "Not due yet" not in text
 
-    # running it again the same day doesn't send a second email
     assert client.post("/internal/send-reminders", headers=auth).get_json() == {"emailsSent": 0}

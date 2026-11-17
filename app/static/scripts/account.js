@@ -1,11 +1,9 @@
-// ACCOUNT PANEL
 // the (i) next to your name in the sidebar. shows your account details,
 // lets you change your display name and your password
 
 const accountName = document.getElementById("accountName");
 const accountInfoButton = document.getElementById("accountInfoButton");
 
-// small helper so building the panel isn't 100 lines of createElement
 function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
     Object.assign(node, props);
@@ -13,7 +11,6 @@ function el(tag, props = {}, children = []) {
     return node;
 }
 
-// one cell of the grey info box: small grey label on top, value under it
 function infoItem(label, value) {
     return el("div", { className: "accountInfoItem" }, [
         el("span", { className: "accountLabel", textContent: label }),
@@ -28,7 +25,6 @@ function setStatus(status, text, ok) {
 }
 
 function buildAccountPanel(account) {
-    // HEADER: title, one line under it, x to close
     const header = el("div", { className: "accountHeader" }, [
         el("div", {}, [
             el("h2", { textContent: "Account" }),
@@ -44,24 +40,20 @@ function buildAccountPanel(account) {
         }),
     ]);
 
-    // DETAILS: grey box, 2 columns
     const details = el("div", { className: "accountInfo" }, [
         infoItem("Username", account.username),
         infoItem("Member since", formatTaskDate(account.createdAt)),
     ]);
 
-    // DISPLAY NAME
     const nameInput = el("input", {
         className: "toastInput",
         value: account.displayName || "",
-        // empty = show the username
         placeholder: account.username,
         maxLength: 50,
     });
     const nameStatus = el("p", { className: "accountStatus" });
     const nameForm = el("form", { className: "accountSection" }, [
         el("h3", { textContent: "Display name" }),
-        // input and button side by side
         el("div", { className: "accountInline" }, [
             nameInput,
             el("button", { type: "submit", className: "accountButton", textContent: "Save name" }),
@@ -82,7 +74,6 @@ function buildAccountPanel(account) {
         }
     });
 
-    // EMAIL
     // optional. once it's verified you get an email the day before a task is due
     const emailInput = el("input", {
         type: "email",
@@ -96,7 +87,6 @@ function buildAccountPanel(account) {
     const resendButton = el("button", { type: "button", className: "accountLink", textContent: "Resend link" });
     const emailStatus = el("p", { className: "accountStatus" });
 
-    // the line under the input: verified or not, and the resend button when it's waiting
     function showEmailState(acc) {
         resendButton.hidden = !acc.email || acc.emailVerified;
         if (!acc.email) {
@@ -115,7 +105,6 @@ function buildAccountPanel(account) {
             emailInput,
             el("button", { type: "submit", className: "accountButton", textContent: "Save email" }),
         ]),
-        // "verified / not verified" text, with the resend link next to it when it's waiting
         el("div", { className: "accountHintRow" }, [emailState, resendButton]),
         emailStatus,
     ]);
@@ -142,7 +131,6 @@ function buildAccountPanel(account) {
         }
     });
 
-    // PASSWORD
     // hidden username field so the browser's password manager knows which account this is
     const usernameHint = el("input", { type: "text", value: account.username, autocomplete: "username", hidden: true });
     const currentInput = el("input", { type: "password", className: "toastInput", placeholder: "Current password", autocomplete: "current-password", required: true });
@@ -152,7 +140,6 @@ function buildAccountPanel(account) {
     const passwordForm = el("form", { className: "accountSection" }, [
         el("h3", { textContent: "Change password" }),
         usernameHint, currentInput, newInput, confirmInput,
-        // button on its own row, pushed to the right
         el("div", { className: "accountActions" }, [
             el("button", { type: "submit", className: "accountButton", textContent: "Change password" }),
         ]),

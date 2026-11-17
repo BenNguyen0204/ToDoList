@@ -1,4 +1,3 @@
-// ALL TASK CHANGES GO THROUGH HERE
 // add / edit / delete / drag each call one of these 4.
 // update, delete and reorder change the UI first and save after,
 // addTask waits for the server since it needs the id

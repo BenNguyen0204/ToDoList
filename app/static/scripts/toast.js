@@ -1,4 +1,3 @@
-// SHARED DIALOG
 // one dialog in index.html, used 3 ways:
 //   showToast(text, onYes)                             yes/no question
 //   showInputToast(label, value, onSave, placeholder)  one line of text (new list, edit task)
@@ -20,9 +19,7 @@ function openToast(yesText, noText) {
     // opened again before the last one finished closing: don't let it wipe the new content
     clearTimeout(toastCleanup);
     toastYes.textContent = yesText;
-    // showPanelToast hides it
     toastYes.hidden = false;
-    // only showPanelToast uses the wide panel look (toast.css .panelMode)
     toast.classList.remove("panelMode");
     toastNo.textContent = noText;
     toast.classList.add("show");
@@ -40,13 +37,11 @@ function closeToast() {
     }, TOAST_FADE_MS);
 }
 
-// the panel has its own buttons, so only keep Close
 function showPanelToast(element) {
     toastMessage.textContent = "";
     toastMessage.appendChild(element);
     openToast("", "Close");
     toastYes.hidden = true;
-    // wide, left aligned, Close sits in a footer bar (see toast.css)
     toast.classList.add("panelMode");
     // start at the top every time, it remembers the scroll otherwise
     toast.scrollTop = 0;

@@ -3,7 +3,6 @@ body {
     display: flex;
     min-height: 100vh;
     font-family: var(--font);
-    /* thinner, smoother text like on a mac */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: var(--bg);
@@ -44,7 +43,6 @@ input {
     visibility: visible;
 }
 
-/* repeating pixel pattern behind the main area.*/
 .pattern {
 	background-image:
 		/* dark see-through layer on top, makes the rockets quieter. raise 0.8 to dim more */

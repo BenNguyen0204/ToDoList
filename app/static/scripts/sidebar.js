@@ -101,7 +101,6 @@ function renderSidebar() {
                 list.name = newName;
                 renderSidebar();
                 renderTask();
-                // no await, nothing to do after it saves
                 apiSave("PATCH", `/api/lists/${list.id}`, { name: newName });
             };
 
@@ -136,7 +135,6 @@ function renderSidebar() {
             listTitle.textContent = getCurrentList()?.name || "";
             renderSidebar();
             renderTask();
-            // server deletes its tasks too (cascade)
             apiSave("DELETE", `/api/lists/${list.id}`);
         });
 
@@ -151,7 +149,6 @@ function renderSidebar() {
 
 newListButton.addEventListener("click", () => {
     showInputToast("Name your new list:", "", async (name) => {
-        // wait for the id from the server before adding it
         const newList = await apiSave("POST", "/api/lists", { name });
         if (!newList) return;
 
@@ -161,7 +158,6 @@ newListButton.addEventListener("click", () => {
 
         renderSidebar();
         renderTask();
-        // straight into the new list on a phone
         openListOnPhone();
     }, "List name...");
 });

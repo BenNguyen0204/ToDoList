@@ -6,14 +6,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from .extensions import csrf, db, limiter, login_manager, migrate
 
 
-# "1", "true", "yes", "on" -> True. not set -> default
 def env_flag(name, default):
     value = os.environ.get(name)
     if value is None:
         return default
     return value.strip().lower() in ("1", "true", "yes", "on")
 
-# DATABASE_URL from .env (neon) or render. not set -> local sqlite file.
 # neon gives "postgresql://..." or "postgres://...", sqlalchemy needs to know the driver,
 # so turn the start into "postgresql+psycopg://"
 def database_url():
@@ -28,7 +26,7 @@ def database_url():
 
 def create_app(test_config=None):
     # reads .env into environment variables. `flask run` does this by itself,
-    # gunicorn (stage 10) doesn't, so do it here too. never overrides real env vars
+    # gunicorn doesn't, so do it here too. never overrides real env vars
     load_dotenv()
 
     app = Flask(__name__)
@@ -49,16 +47,11 @@ def create_app(test_config=None):
         # pre_ping checks a connection works before using it, recycle replaces it every 5 min
         SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 300},
 
-        # signs the session cookie so nobody can fake being logged in. comes from .env, never from git
         SECRET_KEY=os.environ.get("SECRET_KEY"),
 
-        # HttpOnly: JS can't read the cookie, so injected JS can't steal your session
-        # SameSite=Lax: the cookie isn't sent on POSTs that come from other sites
-        # Secure: https only
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=cookie_secure,
-        # same settings for flask-login's "remember me" cookie
         REMEMBER_COOKIE_HTTPONLY=True,
         REMEMBER_COOKIE_SAMESITE="Lax",
         REMEMBER_COOKIE_SECURE=cookie_secure,
@@ -67,7 +60,7 @@ def create_app(test_config=None):
         # the token is still tied to your session, so it's safe without a time limit
         WTF_CSRF_TIME_LIMIT=None,
 
-        # keep rate limit counts in memory (that's why render runs 1 worker, see stage 10)
+        # keep rate limit counts in memory (that's why render runs 1 worker)
         RATELIMIT_STORAGE_URI="memory://",
 
         # set REGISTRATION_OPEN=0 once your account exists, so strangers can't sign up
@@ -83,15 +76,13 @@ def create_app(test_config=None):
         REMINDER_TOKEN=os.environ.get("REMINDER_TOKEN"),
     )
 
-    # tests (stage 8) pass their own settings here: temp database, csrf off, etc.
+    # tests pass their own settings here: temp database, csrf off, etc.
     # has to run before the SECRET_KEY check so tests can provide one
     if test_config:
         app.config.update(test_config)
 
-    # fail loudly at startup instead of running with no key
     if not app.config["SECRET_KEY"]:
         raise RuntimeError("SECRET_KEY is not set. Copy .env.example to .env and fill it in.")
-    # a key without a sender would fail on every email, better to find out now
     if app.config["BREVO_API_KEY"] and not app.config["MAIL_SENDER"]:
         raise RuntimeError("BREVO_API_KEY is set but MAIL_SENDER isn't. Add it to .env.")
 
@@ -103,12 +94,10 @@ def create_app(test_config=None):
 
     from . import models
 
-    # flask-login only keeps the user id in the cookie, this turns it back into a User
     @login_manager.user_loader
     def load_user(user_id):
         return db.session.get(models.User, int(user_id))
 
-    # runs when @login_required blocks someone who isn't logged in
     @login_manager.unauthorized_handler
     def unauthorized():
         # the JS reads the 401 and goes to /login itself
